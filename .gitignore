@@ -1,0 +1,37 @@
+# .NET build outputs
+obj/
+bin/
+
+# Python cache
+__pycache__/
+*.py[oc]
+
+# Qwen IDE
+.qwen/
+QWEN.md
+.obsidian/
+
+# Environment files
+.env
+
+# User-specific files
+instruction.txt
+
+# Test output
+*.trx
+TestResults/
+
+# IDE files
+.vs/
+*.user
+*.suo
+.idea/
+*.iml
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+logs/

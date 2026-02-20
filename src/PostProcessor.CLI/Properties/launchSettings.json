@@ -1,0 +1,9 @@
+{
+  "profiles": {
+    "PostProcessor.CLI": {
+      "commandName": "Project",
+      "commandLineArgs": "-i C:\\Users\\rybak\\Desktop\\PMO_22_201_01_R1_U1_01.aptsource -o output_840d_sl.nc -c siemens -cfg \"configs/controllers/siemens/840d_sl.json\"",
+      "hotReloadEnabled": false
+    }
+  }
+}

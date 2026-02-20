@@ -1,0 +1,42 @@
+{
+  "name": "Heidenhain TNC 640",
+  "machineType": "Milling",
+  "version": "340490-03",
+  "registerFormats": {
+    "X": { "address": "X", "format": "F3.3", "isModal": false },
+    "Y": { "address": "Y", "format": "F3.3", "isModal": false },
+    "Z": { "address": "Z", "format": "F3.3", "isModal": false },
+    "A": { "address": "A", "format": "F3.3", "isModal": false },
+    "B": { "address": "B", "format": "F3.3", "isModal": false },
+    "C": { "address": "C", "format": "F3.3", "isModal": false },
+    "F": { "address": "F", "format": "F2.1", "isModal": false },
+    "S": { "address": "S", "format": "F0", "isModal": false },
+    "T": { "address": "T", "format": "F0", "isModal": false }
+  },
+  "functionCodes": {
+    "rapid": { "code": "L", "group": "MOTION", "isModal": false, "description": "Rapid positioning (Heidenhain syntax)" },
+    "linear": { "code": "L", "group": "MOTION", "isModal": false, "description": "Linear interpolation (Heidenhain syntax)" },
+    "spindle_cw": { "code": "M3", "group": "SPINDLE", "isModal": true, "description": "Spindle ON CW" },
+    "spindle_stop": { "code": "M5", "group": "SPINDLE", "isModal": false, "description": "Spindle STOP" },
+    "coolant_flood": { "code": "M8", "group": "COOLANT", "isModal": true, "description": "Coolant ON" },
+    "coolant_off": { "code": "M9", "group": "COOLANT", "isModal": false, "description": "Coolant OFF" },
+    "tool_change": { "code": "T", "group": "TOOL_CHANGE", "isModal": false, "description": "Tool change (inline syntax)" },
+    "program_end": { "code": "M30", "group": "PROGRAM", "isModal": false, "description": "Program end" }
+  },
+  "workCoordinateSystems": [
+    { "number": 1, "code": "G54", "xOffset": 0.0, "yOffset": 0.0, "zOffset": 0.0 }
+  ],
+  "safety": {
+    "clearancePlane": 100.0,
+    "retractPlane": 2.0,
+    "maxFeedRate": 8000.0,
+    "maxSpindleSpeed": 10000.0,
+    "autoToolChangeRetract": true
+  },
+  "templates": {
+    "header": "BEGIN PGM %PROGRAM_NAME% MM",
+    "footer": "M30\nEND PGM %PROGRAM_NAME% MM",
+    "includeTimestamp": false,
+    "includeToolList": true
+  }
+}

@@ -1,0 +1,20 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+    <PropertyGroup>
+        <TargetFramework>net8.0</TargetFramework>
+        <ImplicitUsings>enable</ImplicitUsings>
+        <Nullable>enable</Nullable>
+        <RootNamespace>PostProcessor.Macros</RootNamespace>
+        <AssemblyName>PostProcessor.Macros</AssemblyName>
+    </PropertyGroup>
+
+    <ItemGroup>
+        <!-- Python integration for macro execution -->
+        <PackageReference Include="pythonnet" Version="3.0.3" />
+    </ItemGroup>
+
+    <ItemGroup>
+      <ProjectReference Include="..\PostProcessor.Core\PostProcessor.Core.csproj" />
+    </ItemGroup>
+
+</Project>

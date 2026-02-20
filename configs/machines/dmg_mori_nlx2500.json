@@ -1,0 +1,125 @@
+{
+  "$schema": "machine-profile-schema.json",
+  "_comment": "Профиль станка DMG Mori NLX 2500 с контроллером Fanuc 31i",
+  "_version": "1.0",
+  
+  "name": "DMG Mori NLX 2500",
+  "machineProfile": "nlx2500_01",
+  "machineType": "Turning",
+  "version": "Fanuc 31i-B5",
+  
+  "registerFormats": {
+    "X": { 
+      "address": "X", 
+      "format": "F4.3", 
+      "isModal": true,
+      "minValue": 0,
+      "maxValue": 300
+    },
+    "Z": { 
+      "address": "Z", 
+      "format": "F4.3", 
+      "isModal": true,
+      "minValue": -200,
+      "maxValue": 50
+    },
+    "F": { 
+      "address": "F", 
+      "format": "F3.2", 
+      "isModal": false,
+      "minValue": 0.01,
+      "maxValue": 500
+    },
+    "S": { 
+      "address": "S", 
+      "format": "F0", 
+      "isModal": false,
+      "minValue": 10,
+      "maxValue": 6000
+    },
+    "T": { 
+      "address": "T", 
+      "format": "F0", 
+      "isModal": false,
+      "minValue": 1,
+      "maxValue": 12
+    }
+  },
+  
+  "functionCodes": {
+    "rapid": { "code": "G00", "group": "MOTION", "isModal": true },
+    "linear": { "code": "G01", "group": "MOTION", "isModal": true },
+    "cw_arc": { "code": "G02", "group": "MOTION", "isModal": true },
+    "ccw_arc": { "code": "G03", "group": "MOTION", "isModal": true },
+    "spindle_cw": { "code": "M03", "group": "SPINDLE", "isModal": true },
+    "spindle_ccw": { "code": "M04", "group": "SPINDLE", "isModal": true },
+    "spindle_stop": { "code": "M05", "group": "SPINDLE", "isModal": false },
+    "coolant_flood": { "code": "M08", "group": "COOLANT", "isModal": true },
+    "coolant_off": { "code": "M09", "group": "COOLANT", "isModal": false },
+    "tool_change": { "code": "M06", "group": "TOOL_CHANGE", "isModal": false },
+    "program_end": { "code": "M30", "group": "PROGRAM", "isModal": false }
+  },
+  
+  "workCoordinateSystems": [
+    { "number": 1, "code": "G54", "xOffset": 0.0, "zOffset": 0.0 }
+  ],
+  
+  "drillingCycles": {
+    "drill": "G81",
+    "peckDrill": "G83",
+    "tapping": "G84",
+    "boring": "G85"
+  },
+  
+  "safety": {
+    "clearancePlane": 50.0,
+    "retractPlane": 2.0,
+    "maxFeedRate": 500.0,
+    "maxSpindleSpeed": 6000.0,
+    "minThreadFeed": 0.05,
+    "autoToolChangeRetract": true,
+    "enableTravelLimitsCheck": true
+  },
+  
+  "templates": {
+    "header": "(POSTPROCESSED FOR DMG MORI NLX 2500)",
+    "footer": "M30",
+    "includeTimestamp": true,
+    "includeToolList": true
+  },
+  
+  "customParameters": {
+    "useToolLengthCompensation": true,
+    "defaultToolChangeHeight": 100.0,
+    "enableChipConveyor": true,
+    "useSpindleSoftStart": false,
+    "keepSpindleOnAtEnd": false,
+    "chipConveyorDelay": 3.0,
+    "defaultRapidOverride": 100
+  },
+  
+  "customGCodes": {
+    "workOffset": "G54",
+    "cannedCycle": "G81",
+    "grooveCycle": "G75",
+    "threadCycle": "G76"
+  },
+  
+  "customMCodes": {
+    "toolClamp": "M10",
+    "toolUnclamp": "M11",
+    "chipConveyorForward": "M301",
+    "chipConveyorReverse": "M302",
+    "tailstockForward": "M20",
+    "tailstockBackward": "M21"
+  },
+  
+  "axisLimits": {
+    "XMin": 0,
+    "XMax": 300,
+    "YMin": -50,
+    "YMax": 50,
+    "ZMin": -200,
+    "ZMax": 50
+  }
+}

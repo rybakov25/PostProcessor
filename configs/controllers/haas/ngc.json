@@ -1,0 +1,143 @@
+{
+  "$schema": "../controller-schema.json",
+  "name": "Haas NGC (Next Generation Control)",
+  "version": "NGC-2024",
+  "description": "Configuration for Haas NGC controllers (VF, UMC, ST series)",
+
+  "output": {
+    "extension": ".nc",
+    "encoding": "UTF-8",
+    "lineEnding": "LF"
+  },
+
+  "formatting": {
+    "blockNumber": {
+      "enabled": false,
+      "prefix": "N",
+      "increment": 10,
+      "start": 1
+    },
+    "coordinates": {
+      "decimals": 3,
+      "trailingZeros": false,
+      "decimalPoint": true
+    },
+    "feedrate": {
+      "decimals": 1,
+      "prefix": "F"
+    },
+    "spindleSpeed": {
+      "decimals": 0,
+      "prefix": "S"
+    }
+  },
+
+  "gcode": {
+    "rapid": "G0",
+    "linear": "G1",
+    "circularCW": "G2",
+    "circularCCW": "G3",
+    "dwell": "G4",
+    "planeXY": "G17",
+    "planeZX": "G18",
+    "planeYZ": "G19",
+    "absolute": "G90",
+    "incremental": "G91",
+    "feedPerMin": "G94",
+    "feedPerRev": "G95",
+    "exactStop": "G9",
+    "continuousPath": "G64",
+    "cutterCompLeft": "G41",
+    "cutterCompRight": "G42",
+    "cutterCompOff": "G40",
+    "peckDrilling": "G73",
+    "fineBoring": "G76",
+    "cancelCycle": "G80",
+    "drilling": "G81",
+    "counterBoring": "G82",
+    "deepDrilling": "G83",
+    "reaming": "G85",
+    "tapping": "G84",
+    "boring": "G86",
+    "unitsMM": "G21",
+    "unitsInch": "G20"
+  },
+
+  "mcode": {
+    "programStart": "%",
+    "programEnd": "M30",
+    "programStop": "M00",
+    "optionalStop": "M01",
+    "spindleCW": "M3",
+    "spindleCCW": "M4",
+    "spindleStop": "M5",
+    "spindleOrient": "M19",
+    "coolantOn": "M8",
+    "coolantOff": "M9",
+    "coolantMist": "M7",
+    "toolChange": "M6",
+    "palletChange": "M60",
+    "airBlastOn": "M50",
+    "airBlastOff": "M51"
+  },
+
+  "cycles": {
+    "drilling": "G81",
+    "deepDrilling": "G83",
+    "reaming": "G85",
+    "tapping": "G84",
+    "boring": "G86",
+    "peckDrilling": "G73",
+    "fineBoring": "G76",
+    "backBoring": "G87",
+    "threadMilling": "G2/G3",
+    "rectangularPocket": "G150",
+    "circularPocket": "G150",
+    "slotMilling": "G150"
+  },
+
+  "fiveAxis": {
+    "enabled": true,
+    "tcpEnabled": true,
+    "tcpOn": "G43.4",
+    "tcpOff": "G49",
+    "transformation": "G68.2",
+    "transformationOff": "G69"
+  },
+
+  "templates": {
+    "enabled": true,
+    "header": [
+      "%",
+      "(PROGRAM: {name})",
+      "(DATE: {dateTime})",
+      "(POST: UNIVERSAL POSTPROCESSOR)",
+      "(MACHINE: {machineName})"
+    ],
+    "footer": [
+      "M5",
+      "M9",
+      "G91 G28 Z0",
+      "G28 X0 Y0",
+      "M30",
+      "%"
+    ]
+  },
+
+  "safety": {
+    "retractPlane": 50.0,
+    "clearanceHeight": 100.0,
+    "approachDistance": 5.0,
+    "maxFeedRate": 10000.0,
+    "maxRapidRate": 20000.0,
+    "maxSpindleSpeed": 12000.0
+  },
+
+  "customParameters": {
+    "useHighSpeedMachining": true,
+    "highSpeedCode": "G5.1Q1",
+    "enableLookAhead": true,
+    "defaultWorkOffset": "G54",
+    "toolChangePosition": "G28 G91 Z0"
+  }
+}

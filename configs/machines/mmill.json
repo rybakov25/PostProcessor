@@ -1,0 +1,137 @@
+{
+  "$schema": "machine-config-schema.json",
+  "name": "MASTERMILL HPC-3",
+  "controller": "siemens/840d",
+  "version": "1.0",
+  "description": "5-axis milling machine",
+  
+  "axes": {
+    "linear": ["X", "Y", "Z"],
+    "rotary": ["B", "C"],
+    "primary": "X",
+    "secondary": "Y",
+    "tertiary": "Z"
+  },
+  
+  "limits": {
+    "X": { "min": -100, "max": 1000 },
+    "Y": { "min": -500, "max": 500 },
+    "Z": { "min": -100, "max": 800 },
+    "B": { "min": -180, "max": 180 },
+    "C": { "min": -360, "max": 360 }
+  },
+  
+  "discretization": {
+    "B": {
+      "enabled": true,
+      "increment": 1
+    },
+    "C": {
+      "enabled": false,
+      "increment": 1
+    },
+    "A": {
+      "enabled": false,
+      "increment": 1
+    }
+  },
+  
+  "head": {
+    "orientation": "horizontal",
+    "fiveAxisSupport": true,
+    "threePlusTwoSupport": true,
+    "headName": "TCB6",
+    "clampCommand": "M80",
+    "unclampCommand": "M81"
+  },
+  
+  "table": {
+    "type": "rotary",
+    "axes": ["B"],
+    "discretization": {
+      "enabled": true,
+      "increment": 1
+    }
+  },
+  
+  "positioning": {
+    "rapid": {
+      "order": ["Y", "XZ"],
+      "description": "First Y, then X and Z simultaneously"
+    },
+    "rotary": {
+      "beforeLinear": true,
+      "description": "Rotary axes after linear"
+    }
+  },
+  
+  "fiveAxis": {
+    "enabled": true,
+    "transformation": "TRAORI",
+    "cycle800": {
+      "enabled": true,
+      "parameters": {
+        "mode": 0,
+        "table": "0",
+        "rotation": 200000,
+        "plane": 57,
+        "x": 0,
+        "y": 0,
+        "z": 0,
+        "a": 0,
+        "b": 0,
+        "c": 0,
+        "dx": 0,
+        "dy": 0,
+        "dz": 0,
+        "dir": 1,
+        "feed": 100,
+        "maxFeed": 1
+      }
+    },
+    "rtcp": {
+      "on": "RTCPON",
+      "off": "RTCPOF"
+    }
+  },
+  
+  "toolChange": {
+    "format": "T{tool} M6",
+    "position": {
+      "X": null,
+      "Y": null,
+      "Z": 100
+    },
+    "beforeChange": [
+      "G0 Z100."
+    ],
+    "afterChange": [
+      "G0 B0",
+      "M101H0",
+      "RTCPON"
+    ]
+  },
+  
+  "spindle": {
+    "maxRPM": 6000,
+    "defaultRPM": 1600,
+    "orientation": "horizontal"
+  },
+  
+  "coolant": {
+    "types": ["flood", "mist", "through"],
+    "default": "flood"
+  },
+  
+  "safety": {
+    "retractPlane": 50,
+    "clearanceHeight": 100,
+    "approachDistance": 5
+  },
+  
+  "macros": {
+    "init": "mmill/init.py",
+    "fini": "mmill/fini.py",
+    "toolChange": "mmill/loadtl.py"
+  }
+}

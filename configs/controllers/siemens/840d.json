@@ -1,0 +1,150 @@
+{
+  "$schema": "controller-config-schema.json",
+  "name": "Siemens Sinumerik 840D sl",
+  "version": "1.0",
+  "description": "Configuration for Siemens Sinumerik 840D sl CNC controllers",
+  
+  "output": {
+    "extension": ".mpf",
+    "encoding": "UTF-8",
+    "lineEnding": "LF"
+  },
+  
+  "formatting": {
+    "blockNumber": {
+      "enabled": true,
+      "prefix": "N",
+      "increment": 10,
+      "start": 10
+    },
+    "coordinates": {
+      "decimals": 3,
+      "trailingZeros": false,
+      "decimalPoint": true
+    },
+    "feedrate": {
+      "decimals": 1,
+      "prefix": "F"
+    },
+    "spindleSpeed": {
+      "decimals": 0,
+      "prefix": "S"
+    }
+  },
+  
+  "gcode": {
+    "rapid": "G0",
+    "linear": "G1",
+    "circularCW": "G2",
+    "circularCCW": "G3",
+    "dwell": "G4",
+    "planeXY": "G17",
+    "planeZX": "G18",
+    "planeYZ": "G19",
+    "absolute": "G90",
+    "incremental": "G91",
+    "feedPerMin": "G94",
+    "feedPerRev": "G95",
+    "exactStop": "G9",
+    "continuousPath": "G64",
+    "cutterCompLeft": "G41",
+    "cutterCompRight": "G42",
+    "cutterCompOff": "G40",
+    "peckDrilling": "G73",
+    "fineBoring": "G76",
+    "cancelCycle": "G80",
+    "drilling": "G81",
+    "counterBoring": "G82",
+    "deepDrilling": "G83",
+    "reaming": "G85",
+    "tapping": "G84",
+    "boring": "G86",
+    "backBoring": "G87",
+    "boringRetract": "G88",
+    "fineBoringRetract": "G89",
+    "highSpeedPeck": "G73.1",
+    "deepDrillingRetract": "G83.1",
+    "inverseTime": "G93",
+    "unitsMM": "G71",
+    "unitsInch": "G70"
+  },
+  
+  "mcode": {
+    "programStart": "",
+    "programEnd": "M30",
+    "programStop": "M00",
+    "optionalStop": "M01",
+    "spindleCW": "M3",
+    "spindleCCW": "M4",
+    "spindleStop": "M5",
+    "spindleOrient": "M19",
+    "coolantOn": "M8",
+    "coolantOff": "M9",
+    "coolantMist": "M7",
+    "toolChange": "M6",
+    "palletChange": "M60",
+    "subprogramCall": "M98",
+    "subprogramEnd": "M99",
+    "airBlastOn": "M50",
+    "airBlastOff": "M51"
+  },
+  
+  "cycles": {
+    "drilling": "CYCLE81",
+    "deepDrilling": "CYCLE83",
+    "reaming": "CYCLE85",
+    "tapping": "CYCLE84",
+    "boring": "CYCLE86",
+    "peckDrilling": "CYCLE82",
+    "fineBoring": "CYCLE87",
+    "backBoring": "CYCLE88",
+    "threadMilling": "CYCLE90",
+    "rectangularPocket": "POCKET3",
+    "circularPocket": "CYCLE76",
+    "slotMilling": "SLOT1",
+    "circularSlot": "CYCLE77",
+    "longitudinalTurning": "CYCLE95",
+    "faceTurning": "CYCLE93",
+    "grooving": "CYCLE94",
+    "threadTurning": "CYCLE97",
+    "undercut": "CYCLE96"
+  },
+  
+  "fiveAxis": {
+    "enabled": true,
+    "tcpEnabled": true,
+    "tcpOn": "RTCPON",
+    "tcpOff": "RTCPOF",
+    "transformation": "TRAORI",
+    "transformationOff": "TRAFOOF",
+    "cycle800": {
+      "enabled": true,
+      "format": "CYCLE800({mode},\"{table}\",{rotation},{plane},{x},{y},{z},{a},{b},{c},{dx},{dy},{dz},{dir},{feed},{maxFeed})"
+    }
+  },
+  
+  "templates": {
+    "enabled": true,
+    "header": [
+      ";==================================================",
+      "; PostProcessor v1.0 for {name} ;)",
+      "; Input: {inputFile} ;)",
+      "; Generated: {dateTime} ;)",
+      ";==================================================)"
+    ],
+    "footer": [
+      "M5",
+      "M9",
+      "RTCPOF",
+      "M30"
+    ]
+  },
+  
+  "safety": {
+    "retractPlane": 50.0,
+    "clearanceHeight": 100.0,
+    "approachDistance": 5.0,
+    "maxFeedRate": 10000.0,
+    "maxRapidRate": 20000.0
+  }
+}
