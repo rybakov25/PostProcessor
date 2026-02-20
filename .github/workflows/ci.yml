@@ -1,0 +1,62 @@
+name: CI - Build and Test
+
+on:
+  push:
+    branches: [ master, develop ]
+  pull_request:
+    branches: [ master, develop ]
+
+env:
+  DOTNET_VERSION: '8.0.x'
+  PYTHON_VERSION: '3.11'
+  CONFIGURATION: 'Release'
+
+jobs:
+  build-and-test:
+    name: Build & Test (${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os: [windows-latest, ubuntu-latest]
+      fail-fast: false
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Setup .NET
+      uses: actions/setup-dotnet@v4
+      with:
+        dotnet-version: ${{ env.DOTNET_VERSION }}
+
+    - name: Setup Python
+      uses: actions/setup-python@v5
+      with:
+        python-version: ${{ env.PYTHON_VERSION }}
+
+    - name: Restore dependencies
+      run: dotnet restore PostProcessor.sln
+
+    - name: Build
+      run: dotnet build PostProcessor.sln -c ${{ env.CONFIGURATION }} --no-restore
+
+    - name: Run tests
+      run: dotnet test src/PostProcessor.Tests/PostProcessor.Tests.csproj -c ${{ env.CONFIGURATION }} --no-build --verbosity normal --logger trx --results-directory TestResults
+
+    - name: Upload test results
+      uses: actions/upload-artifact@v4
+      if: always()
+      with:
+        name: test-results-${{ matrix.os }}
+        path: TestResults/*.trx
+        retention-days: 7
+
+    - name: Publish code coverage
+      uses: actions/upload-artifact@v4
+      if: success()
+      with:
+        name: coverage-${{ matrix.os }}
+        path: |
+          src/PostProcessor.Tests/coverage.opencover.xml
+          src/PostProcessor.Tests/coverage.json
+        retention-days: 7

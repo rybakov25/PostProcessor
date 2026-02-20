@@ -1,0 +1,75 @@
+# Git line endings configuration
+# https://help.github.com/articles/dealing-with-line-endings/
+
+# Set default behavior to automatically normalize text files
+* text=auto
+
+# Explicitly declare source files to always use LF line endings
+*.cs text eol=lf
+*.csproj text eol=lf
+*.sln text eol=lf
+*.json text eol=lf
+*.xml text eol=lf
+*.config text eol=lf
+*.md text eol=lf
+*.txt text eol=lf
+*.sh text eol=lf
+*.bash text eol=lf
+
+# Python files should use LF
+*.py text eol=lf
+*.pyw text eol=lf
+
+# Build outputs should remain binary
+*.dll binary
+*.exe binary
+*.pdb binary
+*.ilk binary
+*.obj binary
+*.lib binary
+*.so binary
+*.dylib binary
+
+# NuGet packages
+*.nupkg binary
+*.snupkg binary
+
+# Images and media files
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.gif binary
+*.ico binary
+*.svg binary
+*.bmp binary
+*.webp binary
+
+# Documents
+*.pdf binary
+*.doc binary
+*.docx binary
+*.xls binary
+*.xlsx binary
+*.ppt binary
+*.pptx binary
+
+# Archives
+*.zip binary
+*.rar binary
+*.7z binary
+*.tar binary
+*.gz binary
+
+# IDE and editor files
+.vs/ binary
+.vscode/ binary
+.idea/ binary
+*.suo binary
+*.user binary
+*.userosscache binary
+*.sln.docstates binary
+*.pid binary
+
+# Test results
+*.trx binary
+TestResults/ binary
