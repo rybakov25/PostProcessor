@@ -22,11 +22,6 @@ public class PythonPostContext
         machine = new PythonMachineState(context.Machine);
         system = new PythonSystemVariables(context);
         globalVars = new PythonGlobalVariables(context);
-        
-        // Инициализация нумерации блоков
-        _blockNumber = 1;
-        _blockIncrement = 2;
-        _blockNumberEnabled = true;
     }
 
     // === Регистры ===
@@ -47,20 +42,15 @@ public class PythonPostContext
     // === Переменные состояния ===
     public double? currentFeed { get; set; }
     public string currentMotionType { get; set; } = "LINEAR";
-    
-    // === Поля для нумерации блоков ===
-    private int _blockNumber;
-    private int _blockIncrement;
-    private bool _blockNumberEnabled;
-    
+
     // === Методы управления нумерацией ===
     public void setBlockNumbering(int start = 1, int increment = 2, bool enabled = true)
     {
         _context.SetSystemVariable("BLOCK_NUMBER", start);
         _context.SetSystemVariable("BLOCK_INCREMENT", increment);
-        _blockNumberEnabled = enabled;
+        _context.SetSystemVariable("BLOCK_NUMBER_ENABLED", enabled);
     }
-    
+
     public int getNextBlockNumber()
     {
         int num = _context.GetSystemVariable("BLOCK_NUMBER", 1);
@@ -77,14 +67,7 @@ public class PythonPostContext
     {
         if (!string.IsNullOrWhiteSpace(line))
         {
-            if (suppressBlock || !_blockNumberEnabled)
-            {
-                _context.BlockWriter.WriteLine(line);
-            }
-            else
-            {
-                _context.BlockWriter.WriteLine(line);
-            }
+            _context.BlockWriter.WriteLine(line);
             _context.Output.Flush();
         }
     }

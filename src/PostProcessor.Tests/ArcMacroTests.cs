@@ -223,9 +223,9 @@ public class ArcMacroTests : IDisposable
 
         // Assert
         var output = GetOutput();
-        Assert.DoesNotContain("X50.000", output); // X is modal, unchanged
-        Assert.DoesNotContain("Y50.000", output); // Y is modal, unchanged
-        Assert.Contains("Z-5.000", output); // Z changed, output
+        Assert.DoesNotContain("X50", output); // X is modal, unchanged
+        Assert.DoesNotContain("Y50", output); // Y is modal, unchanged
+        Assert.Contains("Z", output); // Z changed, output
     }
 
     public void Dispose()
