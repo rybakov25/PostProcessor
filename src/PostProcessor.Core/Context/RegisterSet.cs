@@ -14,6 +14,11 @@ public class RegisterSet
     public Register F => GetOrAdd("F", 0.0, false, "F3.1"); // Подача
     public Register S => GetOrAdd("S", 0.0, false, "F0");   // Обороты
     public Register T => GetOrAdd("T", 0.0, false, "F0");   // Номер инструмента
+    
+    // Регистры для дуг (I, J, K - центр дуги)
+    public Register I => GetOrAdd("I", 0.0, true, "F4.3");
+    public Register J => GetOrAdd("J", 0.0, true, "F4.3");
+    public Register K => GetOrAdd("K", 0.0, true, "F4.3");
 
     public Register GetOrAdd(string name, double initialValue = 0.0, bool isModal = true, string format = "F4.3")
     {

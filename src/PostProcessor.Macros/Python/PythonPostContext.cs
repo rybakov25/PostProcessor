@@ -70,34 +70,42 @@ public class PythonPostContext
     }
     
     // === Методы вывода ===
+    /// <summary>
+    /// Записать строку через BlockWriter с автоматической модальностью
+    /// </summary>
     public void write(string line, bool suppressBlock = false)
     {
         if (!string.IsNullOrWhiteSpace(line))
         {
             if (suppressBlock || !_blockNumberEnabled)
             {
-                _context.Output.WriteLine(line);
+                _context.BlockWriter.WriteLine(line);
             }
             else
             {
-                int blockNum = getNextBlockNumber();
-                _context.Output.WriteLine($"N{blockNum} {line}");
+                _context.BlockWriter.WriteLine(line);
             }
             _context.Output.Flush();
         }
     }
 
+    /// <summary>
+    /// Записать строку напрямую (без BlockWriter)
+    /// </summary>
     public void writeln(string line = "")
     {
         _context.Output.WriteLine(line);
         _context.Output.Flush();
     }
 
+    /// <summary>
+    /// Записать комментарий в формате станка
+    /// </summary>
     public void comment(string text)
     {
         if (!string.IsNullOrWhiteSpace(text))
         {
-            _context.Output.WriteLine($"({text})");
+            _context.BlockWriter.WriteComment(text);
             _context.Output.Flush();
         }
     }
@@ -111,12 +119,64 @@ public class PythonPostContext
         }
     }
     
+    /// <summary>
+    /// Записать NC-блок через BlockWriter
+    /// </summary>
+    public void writeBlock(bool includeBlockNumber = true)
+    {
+        _context.BlockWriter.WriteBlock(includeBlockNumber);
+        _context.Output.Flush();
+    }
+    
+    /// <summary>
+    /// Скрыть регистры (не выводить до изменения)
+    /// </summary>
+    public void hide(params string[] registerNames)
+    {
+        foreach (var name in registerNames)
+        {
+            var reg = getRegisterByName(name);
+            if (reg != null)
+                _context.BlockWriter.Hide(reg);
+        }
+    }
+    
+    /// <summary>
+    /// Показать регистры (вывести обязательно)
+    /// </summary>
+    public void show(params string[] registerNames)
+    {
+        foreach (var name in registerNames)
+        {
+            var reg = getRegisterByName(name);
+            if (reg != null)
+                _context.BlockWriter.Show(reg);
+        }
+    }
+    
+    private Register? getRegisterByName(string name)
+    {
+        return name.ToUpper() switch
+        {
+            "X" => _context.Registers.X,
+            "Y" => _context.Registers.Y,
+            "Z" => _context.Registers.Z,
+            "A" => _context.Registers.A,
+            "B" => _context.Registers.B,
+            "C" => _context.Registers.C,
+            "F" => _context.Registers.F,
+            "S" => _context.Registers.S,
+            "T" => _context.Registers.T,
+            _ => null
+        };
+    }
+
     // === Утилиты ===
     public double round(double value, int decimals = 3)
     {
         return Math.Round(value, decimals);
     }
-    
+
     public string format(double value, string format = "F3")
     {
         return value.ToString(format);

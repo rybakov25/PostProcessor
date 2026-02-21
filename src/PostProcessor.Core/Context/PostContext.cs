@@ -10,6 +10,11 @@ public class PostContext : IAsyncDisposable
     public MachineState Machine { get; } = new();
     public CatiaContext Catia { get; } = new();
     public StreamWriter Output { get; }
+    
+    /// <summary>
+    /// Умный формирователь NC-блоков с модальной проверкой
+    /// </summary>
+    public BlockWriter BlockWriter { get; }
 
     /// <summary>
     /// Параметры безопасности станка (ограничения хода, максимальные скорости)
@@ -54,6 +59,14 @@ public class PostContext : IAsyncDisposable
     public PostContext(StreamWriter output)
     {
         Output = output;
+        BlockWriter = new BlockWriter(output);
+        
+        // Регистрация регистров в BlockWriter для автоматического отслеживания
+        BlockWriter.AddWords(
+            Registers.X, Registers.Y, Registers.Z,
+            Registers.A, Registers.B, Registers.C,
+            Registers.F, Registers.S, Registers.T
+        );
     }
 
     /// <summary>
@@ -450,6 +463,49 @@ public class PostContext : IAsyncDisposable
         new PostEvent(PostEventType.GeometryDefined, cmd, new() { ["type"] = "circle" });
 
     // Вспомогательные методы для макросов
+    /// <summary>
+    /// Записать NC-блок через BlockWriter с автоматической модальностью
+    /// </summary>
+    public void WriteBlock(bool includeBlockNumber = true)
+    {
+        BlockWriter.WriteBlock(includeBlockNumber);
+    }
+    
+    /// <summary>
+    /// Записать строку напрямую (для комментариев, заголовков)
+    /// </summary>
+    public void Write(string text)
+    {
+        BlockWriter.WriteLine(text);
+    }
+    
+    /// <summary>
+    /// Записать комментарий в формате станка
+    /// </summary>
+    public void Comment(string text)
+    {
+        BlockWriter.WriteComment(text);
+    }
+    
+    /// <summary>
+    /// Скрыть регистры (не выводить до изменения)
+    /// </summary>
+    public void HideRegisters(params Register[] registers)
+    {
+        BlockWriter.Hide(registers);
+    }
+    
+    /// <summary>
+    /// Показать регистры (вывести обязательно)
+    /// </summary>
+    public void ShowRegisters(params Register[] registers)
+    {
+        BlockWriter.Show(registers);
+    }
+    
+    /// <summary>
+    /// Форматировать движение в блок (устаревший метод, использовать BlockWriter)
+    /// </summary>
     public string FormatMotionBlock(bool isRapid = false)
     {
         var changed = Registers.ChangedRegisters().ToList();

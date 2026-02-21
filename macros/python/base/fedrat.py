@@ -1,28 +1,30 @@
 # -*- coding: ascii -*-
-# FEDRAT MACRO - Feed Rate (MODAL)
+"""
+FEDRAT MACRO - Feed Rate (MODAL)
+
+Feed is MODAL - only output when CHANGED.
+Uses BlockWriter for automatic modal checking.
+"""
+
 
 def execute(context, command):
     """
     Process FEDRAT feed rate command
     
-    Logic:
-    - Feed is MODAL - only output when CHANGED
-    - Store current feed in globalVars.LAST_FEED
+    Args:
+        context: Postprocessor context
+        command: APT command object
     """
-    
     if not command.numeric or len(command.numeric) == 0:
         return
-    
+
     feed = command.numeric[0]
-    
-    # Update register
+
+    # Update register (this sets HasChanged flag automatically)
     context.registers.f = feed
     
-    # MODAL check - only output if feed CHANGED
-    last_feed = context.globalVars.GetDouble("LAST_FEED", 0.0)
-    if last_feed == feed:
-        return  # Same feed, don't output
+    # Force output of F register (it may be modal but we want it now)
+    context.show("F")
     
-    # Feed changed - output and remember
-    context.globalVars.SetDouble("LAST_FEED", feed)
-    context.write("F" + str(round(feed, 1)))
+    # Write block with F register
+    context.writeBlock()
