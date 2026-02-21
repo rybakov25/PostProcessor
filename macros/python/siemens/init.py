@@ -3,6 +3,7 @@
 SIEMENS INIT MACRO - Initialization for Siemens 840D
 
 Initializes global and system variables for Siemens controllers.
+Block numbering is disabled until after header output.
 """
 
 
@@ -64,9 +65,9 @@ def execute(context, command):
     context.globalVars.CIRCLE_TYPE = 4
     context.globalVars.CIRCLE_90 = 0
     
-    # Seqno globals
-    context.globalVars.SEQNO_ON = 1
-    context.globalVars.SEQNO_INCREMENT = 2
+    # Seqno globals - DISABLED until after header
+    context.globalVars.SEQNO_ON = 0  # Disabled initially
+    context.globalVars.SEQNO_INCREMENT = 10
     
     # Comment globals
     context.globalVars.COMMENT_ONOFF = 1
@@ -81,5 +82,8 @@ def execute(context, command):
     context.currentFeed = None
     context.currentMotionType = "LINEAR"
     
-    # Setup block numbering for Siemens
-    context.setBlockNumbering(start=10, increment=10, enabled=True)
+    # Setup block numbering - DISABLED until after header
+    # Block numbering will be enabled after header is output
+    context.BlockWriter.BlockNumberingEnabled = False
+    context.globalVars.BLOCK_NUMBER = 0
+    context.globalVars.BLOCK_INCREMENT = 10

@@ -144,26 +144,33 @@ public class PythonMacroEngine : IMacroEngine
     
     /// <summary>
     /// Загрузка макросов с приоритетами:
-    /// 1. user/{machine}/ - пользовательские (highest priority)
-    /// 2. {machine}/ - специфичные для станка
-    /// 3. base/ - базовые (lowest priority)
+    /// 1. user/ - пользовательские (highest priority)
+    /// 2. user/{machine}/ - пользовательские для станка
+    /// 3. {machine}/ - специфичные для контроллера (siemens, fanuc, etc.)
+    /// 4. base/ - базовые (lowest priority)
     /// </summary>
     private void LoadAllMacros()
     {
         var loadedMacros = new HashSet<string>();
+
+        // Приоритет 1 (highest): Загружаем пользовательские (переопределяют все)
+        LoadMacrosFromDirectory("user", loadedMacros);
         
-        // Приоритет 3 (lowest): Загружаем базовые макросы
-        LoadMacrosFromDirectory("base", loadedMacros);
-        
-        // Приоритет 2 (medium): Загружаем специфичные для станка (переопределяют base)
+        // Приоритет 2: Загружаем пользовательские для конкретного станка
         if (!string.IsNullOrEmpty(_machineName))
+        {
+            LoadMacrosFromDirectory(Path.Combine("user", _machineName), loadedMacros);
+        }
+
+        // Приоритет 3: Загружаем специфичные для контроллера (siemens, fanuc, heidenhain, haas)
+        // _machineName может быть "siemens", "fanuc", etc.
+        if (!string.IsNullOrEmpty(_machineName) && _machineName != "mmill")
         {
             LoadMacrosFromDirectory(_machineName, loadedMacros);
         }
-        
-        // Приоритет 1 (highest): Загружаем пользовательские (переопределяют все)
-        LoadMacrosFromDirectory(Path.Combine("user", _machineName ?? ""), loadedMacros);
-        LoadMacrosFromDirectory("user", loadedMacros);
+
+        // Приоритет 4 (lowest): Загружаем базовые макросы (переопределяются всеми)
+        LoadMacrosFromDirectory("base", loadedMacros);
     }
     
     /// <summary>

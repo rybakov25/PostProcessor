@@ -3,6 +3,7 @@
 SIEMENS PARTNO MACRO - Program Number for Siemens 840D
 
 Outputs program number and name in Siemens format.
+Enables block numbering after header output.
 """
 
 
@@ -14,8 +15,10 @@ def execute(context, command):
         context: Postprocessor context
         command: APT command
     """
-    if not command.numeric or len(command.numeric) == 0:
-        return
+    # Enable block numbering after header
+    context.globalVars.SEQNO_ON = 1
+    context.BlockWriter.BlockNumberingEnabled = True
+    context.BlockWriter.BlockNumberStart = 10
     
     # Get program name
     program_name = ""
@@ -28,7 +31,6 @@ def execute(context, command):
         program_number = int(command.numeric[0])
     
     # Output in Siemens format
-    # Siemens 840D uses: %_N_<name>_MPF or <number>
     if program_number > 0:
         context.write(f"{program_number}")
     
