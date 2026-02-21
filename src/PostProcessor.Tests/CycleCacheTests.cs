@@ -280,14 +280,15 @@ public class PythonCycleCache
     private string FormatParams(System.Collections.Generic.Dictionary<string, object> parameters)
     {
         var parts = new System.Collections.Generic.List<string>();
-        
+
         foreach (var kvp in parameters)
         {
             string formattedValue;
-            
+
             if (kvp.Value is double doubleValue)
             {
-                formattedValue = _context.format(doubleValue, "F3");
+                // Use InvariantCulture for consistent formatting (dot as decimal separator)
+                formattedValue = doubleValue.ToString("F3", System.Globalization.CultureInfo.InvariantCulture);
             }
             else if (kvp.Value is string stringValue)
             {
@@ -304,6 +305,7 @@ public class PythonCycleCache
         return string.Join(", ", parts);
     }
 }
+
 
 
 
