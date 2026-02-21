@@ -3,7 +3,7 @@
 SIEMENS SPINDL MACRO - Spindle Control for Siemens 840D
 
 Handles spindle on/off, direction, and speed control.
-S register is output together with M3/M4 (modal).
+M-code and S are output together in one block.
 """
 
 
@@ -18,9 +18,6 @@ def execute(context, command):
     # Set spindle RPM if provided
     if command.numeric and len(command.numeric) > 0:
         context.globalVars.SPINDLE_RPM = command.numeric[0]
-
-    # Update S register
-    context.registers.s = context.globalVars.SPINDLE_RPM
 
     # Determine spindle state
     spindle_state = context.globalVars.SPINDLE_DEF
@@ -43,25 +40,28 @@ def execute(context, command):
             elif word_upper == 'OFF':
                 spindle_state = 'OFF'
 
+    # Build output parts list
+    parts = []
+
     # Output spindle command
     if spindle_state == 'CLW':
-        context.write("M3")
-        # Output S with M3 (not modal - always output with M3)
+        parts.append("M3")
+        # Add S value
         if context.globalVars.SPINDLE_RPM > 0:
-            context.write(f"S{int(context.globalVars.SPINDLE_RPM)}")
-        context.writeBlock()
+            parts.append(f"S{int(context.globalVars.SPINDLE_RPM)}")
 
     elif spindle_state == 'CCLW':
-        context.write("M4")
-        # Output S with M4 (not modal - always output with M4)
+        parts.append("M4")
+        # Add S value
         if context.globalVars.SPINDLE_RPM > 0:
-            context.write(f"S{int(context.globalVars.SPINDLE_RPM)}")
-        context.writeBlock()
+            parts.append(f"S{int(context.globalVars.SPINDLE_RPM)}")
 
     elif spindle_state == 'ORIENT':
-        context.write("M19")
-        context.writeBlock()
+        parts.append("M19")
 
     else:  # OFF
-        context.write("M5")
-        context.writeBlock()
+        parts.append("M5")
+
+    # Output complete block
+    if parts:
+        context.write(" ".join(parts))

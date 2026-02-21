@@ -3,7 +3,7 @@
 SIEMENS GOTO MACRO - Linear Motion for Siemens 840D
 
 Handles GOTO commands with support for 3-axis and 5-axis motion.
-G-code and coordinates are output together in one block.
+A and B axes are modal - only output when changed.
 """
 
 import math
@@ -30,18 +30,10 @@ def execute(context, command):
     j = command.numeric[4] if len(command.numeric) > 4 else None
     k = command.numeric[5] if len(command.numeric) > 5 else None
 
-    # Update linear registers
+    # Update linear registers (always)
     context.registers.x = x
     context.registers.y = y
     context.registers.z = z
-
-    # Update rotary registers if present
-    if i is not None:
-        context.registers.i = i
-    if j is not None:
-        context.registers.j = j
-    if k is not None:
-        context.registers.k = k
 
     # Determine motion type
     motion_type = context.system.MOTION
@@ -49,7 +41,7 @@ def execute(context, command):
                 motion_type == 'RAPID_BREAK' or 
                 context.currentMotionType == 'RAPID')
 
-    # Build output line
+    # Build output parts list
     if is_rapid:
         # Rapid move G0
         parts = ["G0"]
@@ -61,16 +53,28 @@ def execute(context, command):
         # Linear move G1
         parts = ["G1"]
 
-    # Add coordinates
+    # Add linear coordinates (always output with G-code)
     parts.append(f"X{x:.3f}")
     parts.append(f"Y{y:.3f}")
     parts.append(f"Z{z:.3f}")
 
-    # Add rotary axes for 5-axis (convert IJK to ABC)
+    # Add rotary axes ONLY if present in command (5-axis)
+    # A/B are modal via globalVars comparison
     if i is not None and j is not None and k is not None:
         a, b, c = ijk_to_abc(i, j, k)
-        parts.append(f"A{a:.3f}")
-        parts.append(f"B{b:.3f}")
+        
+        # Get previous values (modal check)
+        prev_a = context.globalVars.GetDouble("PREV_A", -999.0)
+        prev_b = context.globalVars.GetDouble("PREV_B", -999.0)
+        
+        # Only add if changed (modal check)
+        if abs(a - prev_a) > 0.001:
+            parts.append(f"A{a:.3f}")
+            context.globalVars.SetDouble("PREV_A", a)
+        
+        if abs(b - prev_b) > 0.001:
+            parts.append(f"B{b:.3f}")
+            context.globalVars.SetDouble("PREV_B", b)
 
     # Output complete block
     context.write(" ".join(parts))
