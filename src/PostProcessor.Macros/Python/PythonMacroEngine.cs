@@ -28,7 +28,7 @@ public class PythonMacroEngine : IMacroEngine
     {
     }
     
-    public PythonMacroEngine(string pythonDllPath, string machineName, params string[] macroPaths)
+    public PythonMacroEngine(string? pythonDllPath, string machineName, params string[] macroPaths)
     {
         _machineName = machineName;
         _macroPaths = macroPaths;
@@ -238,7 +238,7 @@ public class PythonMacroEngine : IMacroEngine
                 using var sysPath = sys.GetAttr("path");
 
                 // Добавляем директорию с макросом в sys.path
-                sysPath.InvokeMethod("append", new PyString(directory));
+                sysPath.InvokeMethod("append", new PyString(directory!));
             }
 
             using var module = Py.Import(fileName);

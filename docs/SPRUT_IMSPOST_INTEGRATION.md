@@ -18,52 +18,52 @@
 
 ```
 ┌─────────────────────────────────────────────────────────┐
-│                    PostProcessor v1.1                    │
+│                    PostProcessor v1.1                   │
 ├─────────────────────────────────────────────────────────┤
-│                                                          │
-│  ┌──────────────────┐         ┌──────────────────┐     │
-│  │   СПРУТ SDK      │         │    IMSpost       │     │
-│  │  (DotnetPost)    │         │   (hlpfiles)     │     │
-│  ├──────────────────┤         ├──────────────────┤     │
-│  │ TPostprocessor   │         │ *.def macros     │     │
-│  │ TTextNCFile      │         │ init.def         │     │
-│  │ NCBlock          │         │ goto.def         │     │
-│  │ NCWord           │         │ spindl.def       │     │
-│  │ Register         │         │ coolnt.def       │     │
-│  └────────┬─────────┘         └────────┬─────────┘     │
+│                                                         │
+│  ┌──────────────────┐         ┌──────────────────┐      │
+│  │   СПРУТ SDK      │         │    IMSpost       │      │
+│  │  (DotnetPost)    │         │   (hlpfiles)     │      │
+│  ├──────────────────┤         ├──────────────────┤      │
+│  │ TPostprocessor   │         │ *.def macros     │      │
+│  │ TTextNCFile      │         │ init.def         │      │
+│  │ NCBlock          │         │ goto.def         │      │
+│  │ NCWord           │         │ spindl.def       │      │
+│  │ Register         │         │ coolnt.def       │      │
+│  └────────┬─────────┘         └────────┬─────────┘      │
 │           │                            │                │
 │           └──────────┬─────────────────┘                │
 │                      │                                  │
-│              ┌───────▼────────┐                        │
-│              │  PostProcessor │                        │
-│              │   Core (C#)    │                        │
-│              ├────────────────┤                        │
-│              │ NCWord.cs      │                        │
-│              │ BlockWriter.cs │                        │
-│              │ Register.cs    │                        │
-│              │ FormatSpec.cs  │                        │
-│              └────────────────┘                        │
+│              ┌───────▼────────┐                         │
+│              │  PostProcessor │                         │
+│              │   Core (C#)    │                         │
+│              ├────────────────┤                         │
+│              │ NCWord.cs      │                         │
+│              │ BlockWriter.cs │                         │
+│              │ Register.cs    │                         │
+│              │ FormatSpec.cs  │                         │
+│              └────────────────┘                         │
 │                      │                                  │
-│              ┌───────▼────────┐                        │
-│              │ Python Macros  │                        │
-│              ├────────────────┤                        │
-│              │ base/ (18)     │                        │
-│              │  - goto.py     │                        │
-│              │  - spindl.py   │                        │
-│              │  - coolnt.py   │                        │
-│              │  - fedrat.py   │                        │
-│              │  - rapid.py    │                        │
-│              │  - delay.py    │ ← Новый                │
-│              │  - seqno.py    │ ← Новый                │
-│              │  - cutcom.py   │ ← Новый                │
-│              │  - from.py     │ ← Новый                │
-│              │  - gohome.py   │ ← Новый                │
-│              │  - wplane.py   │ ← Новый                │
-│              │  - cycle81.py  │ ← Новый                │
-│              │  - cycle83.py  │ ← Новый                │
-│              │  - subprog.py  │ ← Новый                │
-│              │ siemens/ (18)  │ ← Контроллер-специф.   │
-│              └────────────────┘                        │
+│              ┌───────▼────────┐                         │
+│              │ Python Macros  │                         │
+│              ├────────────────┤                         │
+│              │ base/ (18)     │                         │
+│              │  - goto.py     │                         │
+│              │  - spindl.py   │                         │
+│              │  - coolnt.py   │                         │
+│              │  - fedrat.py   │                         │
+│              │  - rapid.py    │                         │
+│              │  - delay.py    │ ← Новый                 │
+│              │  - seqno.py    │ ← Новый                 │
+│              │  - cutcom.py   │ ← Новый                 │
+│              │  - from.py     │ ← Новый                 │
+│              │  - gohome.py   │ ← Новый                 │
+│              │  - wplane.py   │ ← Новый                 │
+│              │  - cycle81.py  │ ← Новый                 │
+│              │  - cycle83.py  │ ← Новый                 │
+│              │  - subprog.py  │ ← Новый                 │
+│              │ siemens/ (18)  │ ← Контроллер-специф.    │
+│              └────────────────┘                         │
 │                                                         │
 │              **Итого: 36 макросов**                     │
 │              (18 base + 18 siemens)                     │
