@@ -594,6 +594,18 @@ public class PythonGlobalVariables
         set => _context.SetSystemVariable(name, value);
     }
 
+    /// <summary>
+    /// Get value with default (generic)
+    /// </summary>
+    public object Get(string name, object defaultValue = null)
+        => _context.GetSystemVariable(name, defaultValue);
+
+    /// <summary>
+    /// Set value (generic)
+    /// </summary>
+    public void Set(string name, object value)
+        => _context.SetSystemVariable(name, value);
+
     public double GetDouble(string name, double defaultValue = 0.0)
         => _context.GetSystemVariable(name, defaultValue);
 

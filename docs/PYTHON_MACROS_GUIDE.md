@@ -1094,6 +1094,561 @@ value = context.globalVars["CUSTOM_STRING"]
 
 ---
 
+---
+
+### Пример 9: DELAY — пауза/выдержка времени
+
+**APT:** `DELAY/2.5` или `DELAY/REV,10`
+
+**Макрос (`base/delay.py`):**
+
+```python
+# -*- coding: ascii -*-
+# DELAY MACRO - Dwell/Pause
+
+def execute(context, command):
+    """
+    Process DELAY dwell/pause command
+
+    APT Examples:
+      DELAY/2.5           - Dwell for 2.5 seconds
+      DELAY/REV,10        - Dwell for 10 spindle revolutions
+    """
+    if not command.numeric or len(command.numeric) == 0:
+        return
+
+    # Check for revolution-based delay
+    is_revolution = False
+    if command.minorWords:
+        for word in command.minorWords:
+            if word.upper() == 'REV':
+                is_revolution = True
+                break
+
+    delay_value = command.numeric[0]
+
+    if is_revolution:
+        # Convert revolutions to time based on spindle RPM
+        spindle_rpm = context.globalVars.GetDouble("SPINDLE_RPM", 1000.0)
+        delay_seconds = (delay_value * 60.0) / spindle_rpm
+        context.write(f"G04 P{delay_seconds:.3f}")
+    else:
+        # Time-based delay (seconds)
+        context.write(f"G04 X{delay_value:.3f}")
+```
+
+**Вывод:**
+```nc
+N10 G04 X2.500    ; 2.5 seconds dwell
+N12 G04 P0.600    ; 10 rev at 1000 RPM = 0.6 sec
+```
+
+---
+
+### Пример 10: SEQNO — управление нумерацией блоков
+
+**APT:** `SEQNO/ON`, `SEQNO/START,100`, `SEQNO/INCR,5`
+
+**Макрос (`base/seqno.py`):**
+
+```python
+# -*- coding: ascii -*-
+# SEQNO MACRO - Block Numbering Control
+
+def execute(context, command):
+    """
+    Process SEQNO block numbering control command
+
+    APT Examples:
+      SEQNO/ON            - Enable block numbering
+      SEQNO/OFF           - Disable block numbering
+      SEQNO/START,100     - Set starting sequence number to 100
+      SEQNO/INCR,5        - Set increment to 5
+    """
+    if not command.minorWords:
+        return
+
+    for word in command.minorWords:
+        word_upper = word.upper()
+
+        if word_upper == 'ON':
+            context.globalVars.Set("BLOCK_NUMBERING_ENABLED", 1)
+            context.system.SEQNO = 1
+
+        elif word_upper == 'OFF':
+            context.globalVars.Set("BLOCK_NUMBERING_ENABLED", 0)
+            context.system.SEQNO = 0
+
+        elif word_upper == 'START':
+            if command.numeric and len(command.numeric) > 0:
+                start_num = int(command.numeric[0])
+                context.globalVars.SetInt("BLOCK_NUMBER", start_num)
+
+        elif word_upper == 'INCR':
+            if command.numeric and len(command.numeric) > 0:
+                incr_value = int(command.numeric[0])
+                context.globalVars.SetInt("BLOCK_INCREMENT", incr_value)
+```
+
+**Вывод:**
+```nc
+SEQNO/ON        → N1, N3, N5... (нумерация включена)
+SEQNO/OFF       → G0 X100. (без номера блока)
+SEQNO/START,100 → N100, N102, N104...
+```
+
+---
+
+### Пример 11: CUTCOM — радиусная компенсация инструмента
+
+**APT:** `TLCOMP/ON,LEFT` или `TLCOMP/OFF`
+
+**Макрос (`base/cutcom.py`):**
+
+```python
+# -*- coding: ascii -*-
+# CUTCOM MACRO - Cutter Compensation
+
+def execute(context, command):
+    """
+    Process CUTCOM cutter compensation command
+
+    APT Examples:
+      TLCOMP/ON,LEFT      - Enable left compensation (G41)
+      TLCOMP/ON,RIGHT     - Enable right compensation (G42)
+      TLCOMP/OFF          - Disable compensation (G40)
+    """
+    comp_state = None
+    plane = context.globalVars.Get("WORK_PLANE", "XYPLAN")
+
+    if command.minorWords:
+        for word in command.minorWords:
+            word_upper = word.upper()
+            if word_upper in ['ON', 'LEFT']:
+                comp_state = 'LEFT'
+            elif word_upper == 'RIGHT':
+                comp_state = 'RIGHT'
+            elif word_upper == 'OFF':
+                comp_state = 'OFF'
+
+    # Modal check
+    prev_comp = context.globalVars.Get("CUTTER_COMP", "OFF")
+    if comp_state is None:
+        comp_state = prev_comp
+    elif comp_state == prev_comp:
+        return  # No change
+
+    parts = []
+
+    # Plane selection
+    if plane == 'XYPLAN':
+        parts.append("G17")
+    elif plane == 'YZPLAN':
+        parts.append("G18")
+    elif plane == 'ZXPLAN':
+        parts.append("G19")
+
+    # Compensation code
+    if comp_state == 'LEFT':
+        parts.append("G41")
+    elif comp_state == 'RIGHT':
+        parts.append("G42")
+    else:
+        parts.append("G40")
+
+    # Tool offset
+    if comp_state != 'OFF':
+        tool_offset = context.globalVars.GetInt("TOOL_OFFSET", 1)
+        parts.append(f"D{tool_offset}")
+
+    if parts:
+        context.write(" ".join(parts))
+```
+
+**Вывод:**
+```nc
+N10 G17 G41 D1    ; XY plane, left compensation, offset 1
+N12 G40           ; Cancel compensation
+```
+
+---
+
+### Пример 12: FROM — начальная позиция
+
+**APT:** `FROM/100,200,50`
+
+**Макрос (`base/from.py`):**
+
+```python
+# -*- coding: ascii -*-
+# FROM MACRO - Initial Position
+
+def execute(context, command):
+    """
+    Process FROM initial position command
+
+    APT Examples:
+      FROM/X,100,Y,200,Z,50   - Set position at X100 Y200 Z50
+      FROM/100,200,50         - Set position (shorthand)
+
+    GLOBAL.FROM modes:
+      0 - RAPID: Use rapid traverse (G0)
+      1 - GOTO: Use linear feed (G1)
+      2 - HOME: Use home return (G53/G28)
+    """
+    if not command.numeric or len(command.numeric) == 0:
+        return
+
+    x = command.numeric[0] if len(command.numeric) > 0 else 0
+    y = command.numeric[1] if len(command.numeric) > 1 else 0
+    z = command.numeric[2] if len(command.numeric) > 2 else 0
+
+    # Store position
+    context.globalVars.SetDouble("FROM_X", x)
+    context.globalVars.SetDouble("FROM_Y", y)
+    context.globalVars.SetDouble("FROM_Z", z)
+
+    # Update registers
+    context.registers.x = x
+    context.registers.y = y
+    context.registers.z = z
+
+    # Get FROM mode
+    from_mode = context.globalVars.GetInt("FROM_MODE", 0)
+
+    match from_mode:
+        case 0:  # RAPID
+            context.write(f"G0 X{x:.3f} Y{y:.3f} Z{z:.3f}")
+        case 1:  # GOTO
+            feed = context.globalVars.GetDouble("FEEDRATE", 100.0)
+            context.write(f"G1 X{x:.3f} Y{y:.3f} Z{z:.3f} F{feed:.1f}")
+        case 2:  # HOME
+            context.write(f"G0 X{x:.3f} Y{y:.3f}")
+            context.write(f"G53 Z{z:.3f}")
+```
+
+**Вывод:**
+```nc
+N10 G0 X100.000 Y200.000 Z50.000
+```
+
+---
+
+### Пример 13: GOHOME — возврат в домашнюю позицию
+
+**APT:** `GOHOME/X,Y,Z` или `GOHOME/Z`
+
+**Макрос (`base/gohome.py`):**
+
+```python
+# -*- coding: ascii -*-
+# GOHOME MACRO - Return to Home
+
+def execute(context, command):
+    """
+    Process GOHOME return to home command
+
+    APT Examples:
+      GOHOME/X,Y,Z      - Return all axes to home
+      GOHOME/Z          - Return Z axis only to home
+    """
+    home_x = home_y = home_z = False
+
+    if command.minorWords:
+        for word in command.minorWords:
+            word_upper = word.upper()
+            if word_upper == 'X': home_x = True
+            elif word_upper == 'Y': home_y = True
+            elif word_upper == 'Z': home_z = True
+
+    # Default to all axes
+    if not home_x and not home_y and not home_z:
+        home_x = home_y = home_z = True
+
+    # Get home positions
+    home_x_pos = context.globalVars.GetDouble("HOME_X", 0.0)
+    home_y_pos = context.globalVars.GetDouble("HOME_Y", 0.0)
+    home_z_pos = context.globalVars.GetDouble("HOME_Z", 0.0)
+
+    # Use G53 for machine coordinates
+    use_g53 = context.globalVars.Get("HOME_USE_G53", 1)
+
+    parts = []
+    if use_g53:
+        parts.append("G53")
+        if home_x: parts.append(f"X{home_x_pos:.3f}")
+        if home_y: parts.append(f"Y{home_y_pos:.3f}")
+        if home_z: parts.append(f"Z{home_z_pos:.3f}")
+    else:
+        parts.append("G28")
+        if home_x: parts.append("X0")
+        if home_y: parts.append("Y0")
+        if home_z: parts.append("Z0")
+
+    if parts:
+        context.write(" ".join(parts))
+```
+
+**Вывод:**
+```nc
+N10 G53 X0.000 Y0.000 Z0.000    ; Machine home
+N12 G53 Z0.000                   ; Z home only
+```
+
+---
+
+### Пример 14: WPLANE — выбор рабочей плоскости
+
+**APT:** `WPLANE/XYPLAN` или `WPLANE/ON`
+
+**Макрос (`base/wplane.py`):**
+
+```python
+# -*- coding: ascii -*-
+# WPLANE MACRO - Working Plane Control
+
+def execute(context, command):
+    """
+    Process WPLANE working plane command
+
+    APT Examples:
+      WPLANE/ON           - Enable working plane
+      WPLANE/OFF          - Disable working plane
+      WPLANE/XYPLAN       - Set XY plane (G17)
+      WPLANE/YZPLAN       - Set YZ plane (G18)
+      WPLANE/ZXPLAN       - Set ZX plane (G19)
+    """
+    plane_enabled = context.globalVars.Get("WPLANE_ENABLED", 1)
+    plane = context.globalVars.Get("WORK_PLANE", "XYPLAN")
+
+    if command.minorWords:
+        for word in command.minorWords:
+            word_upper = word.upper()
+            if word_upper == 'ON':
+                plane_enabled = 1
+            elif word_upper == 'OFF':
+                plane_enabled = 0
+            elif word_upper == 'XYPLAN':
+                plane = 'XYPLAN'
+            elif word_upper == 'YZPLAN':
+                plane = 'YZPLAN'
+            elif word_upper == 'ZXPLAN':
+                plane = 'ZXPLAN'
+
+    # Modal check
+    prev_plane = context.globalVars.Get("ACTIVE_PLANE", "XYPLAN")
+    parts = []
+
+    if plane != prev_plane and plane_enabled:
+        if plane == 'XYPLAN': parts.append("G17")
+        elif plane == 'YZPLAN': parts.append("G18")
+        elif plane == 'ZXPLAN': parts.append("G19")
+        context.globalVars.Set("ACTIVE_PLANE", plane)
+
+    if parts:
+        context.write(" ".join(parts))
+```
+
+**Вывод:**
+```nc
+N10 G17    ; XY plane
+N12 G18    ; YZ plane
+```
+
+---
+
+### Пример 15: CYCLE81 — сверлильный цикл
+
+**APT:** `CYCLE81/10,0,2,-25,0`
+
+**Макрос (`base/cycle81.py`):**
+
+```python
+# -*- coding: ascii -*-
+# CYCLE81 MACRO - Drilling Cycle
+
+def execute(context, command):
+    """
+    Process CYCLE81 drilling cycle command
+
+    APT format: CYCLE81/RTP,RFP,SDIS,DP,DPR
+
+    Parameters:
+      RTP   - Retract plane (absolute)
+      RFP   - Reference plane (absolute)
+      SDIS  - Safety distance (incremental)
+      DP    - Final drilling depth (absolute)
+      DPR   - Depth relative to reference plane (incremental)
+    """
+    if not command.numeric or len(command.numeric) == 0:
+        return
+
+    rtp = command.numeric[0] if len(command.numeric) > 0 else 0.0
+    rfp = command.numeric[1] if len(command.numeric) > 1 else 0.0
+    sdis = command.numeric[2] if len(command.numeric) > 2 else 2.0
+    dp = command.numeric[3] if len(command.numeric) > 3 else 0.0
+    dpr = command.numeric[4] if len(command.numeric) > 4 else 0.0
+
+    # Modal caching
+    use_cache = context.globalVars.Get("CYCLE_CACHE_ENABLED", 1)
+
+    cached_rtp = context.globalVars.GetDouble("CYCLE81_RTP", -999.0)
+    cached_dp = context.globalVars.GetDouble("CYCLE81_DP", -999.0)
+
+    params_changed = (
+        abs(rtp - cached_rtp) > 0.001 or
+        abs(dp - cached_dp) > 0.001
+    )
+
+    if use_cache and not params_changed and cached_rtp != -999.0:
+        cycle_active = context.globalVars.Get("CYCLE81_ACTIVE", 0)
+        if cycle_active:
+            return  # Already active
+
+    # Build cycle call
+    cycle_str = f"CYCLE81({rtp:.1f},{rfp:.1f},{sdis:.1f},{dp:.1f},{dpr:.1f})"
+    context.write(cycle_str)
+
+    # Cache parameters
+    context.globalVars.SetDouble("CYCLE81_RTP", rtp)
+    context.globalVars.SetDouble("CYCLE81_DP", dp)
+    context.globalVars.Set("CYCLE81_ACTIVE", 1)
+```
+
+**Вывод:**
+```nc
+N10 CYCLE81(10.0,0.0,2.0,-25.0,0.0)
+```
+
+---
+
+### Пример 16: CYCLE83 — цикл глубокого сверления
+
+**APT:** `CYCLE83/10,0,2,-50,0,0,0,5,0.5,0,0.5,1,0,0`
+
+**Макрос (`base/cycle83.py`):**
+
+```python
+# -*- coding: ascii -*-
+# CYCLE83 MACRO - Deep Hole Drilling
+
+def execute(context, command):
+    """
+    Process CYCLE83 deep hole drilling cycle
+
+    APT format: CYCLE83/RTP,RFP,SDIS,DP,DPR,FDEP,FDPR,DAM,DTB,DTS,FRF,AXN,OLDP,AXS
+
+    Parameters:
+      RTP   - Retract plane
+      RFP   - Reference plane
+      SDIS  - Safety distance
+      DP    - Final depth
+      DPR   - Depth relative
+      FDEP  - First drilling depth
+      FDPR  - First depth relative
+      DAM   - Degression amount
+      DTB   - Dwell time at bottom
+      DTS   - Dwell time at start
+      FRF   - Feed rate factor
+      AXN   - Axis selection (1=X, 2=Y, 3=Z)
+      OLDP  - Chip breaking distance
+      AXS   - Axis direction
+    """
+    if not command.numeric or len(command.numeric) == 0:
+        return
+
+    # Get all 14 parameters with defaults
+    rtp = command.numeric[0] if len(command.numeric) > 0 else 0.0
+    rfp = command.numeric[1] if len(command.numeric) > 1 else 0.0
+    sdis = command.numeric[2] if len(command.numeric) > 2 else 2.0
+    dp = command.numeric[3] if len(command.numeric) > 3 else 0.0
+    dpr = command.numeric[4] if len(command.numeric) > 4 else 0.0
+    fdep = command.numeric[5] if len(command.numeric) > 5 else 0.0
+    fdpr = command.numeric[6] if len(command.numeric) > 6 else 0.0
+    dam = command.numeric[7] if len(command.numeric) > 7 else 0.0
+    dtb = command.numeric[8] if len(command.numeric) > 8 else 0.0
+    dts = command.numeric[9] if len(command.numeric) > 9 else 0.0
+    frf = command.numeric[10] if len(command.numeric) > 10 else 1.0
+    axn = command.numeric[11] if len(command.numeric) > 11 else 3
+    oldp = command.numeric[12] if len(command.numeric) > 12 else 0.0
+    axs = command.numeric[13] if len(command.numeric) > 13 else 0
+
+    # Modal caching (similar to CYCLE81)
+    # ... caching logic ...
+
+    # Build cycle call
+    cycle_str = (
+        f"CYCLE83({rtp:.1f},{rfp:.1f},{sdis:.1f},{dp:.1f},{dpr:.1f},"
+        f"{fdep:.1f},{fdpr:.1f},{dam:.3f},{dtb:.2f},{dts:.2f},"
+        f"{frf:.3f},{axn},{oldp:.3f},{axs})"
+    )
+    context.write(cycle_str)
+```
+
+**Вывод:**
+```nc
+N10 CYCLE83(10.0,0.0,2.0,-50.0,0.0,0.0,0.0,5.000,0.50,0.00,1.000,3,0.000,0)
+```
+
+---
+
+### Пример 17: SUBPROG — подпрограммы
+
+**APT:** `CALLSUB/1001` или `ENDSUB`
+
+**Макрос (`base/subprog.py`):**
+
+```python
+# -*- coding: ascii -*-
+# SUBPROG MACRO - Subroutine Control
+
+def execute(context, command):
+    """
+    Process SUBPROG subroutine command
+
+    APT Examples:
+      CALLSUB/1001        - Call subroutine O1001
+      ENDSUB              - End subroutine (M99)
+    """
+    is_callsub = is_endsub = False
+
+    if command.minorWords:
+        for word in command.minorWords:
+            word_upper = word.upper()
+            if word_upper == 'CALLSUB': is_callsub = True
+            elif word_upper == 'ENDSUB': is_endsub = True
+
+    if is_callsub:
+        if command.numeric and len(command.numeric) > 0:
+            sub_num = int(command.numeric[0])
+
+            # Track call count
+            call_count = context.globalVars.GetInt(f"SUBCALL_{sub_num}", 0) + 1
+            context.globalVars.SetInt(f"SUBCALL_{sub_num}", call_count)
+
+            # Output subroutine call
+            use_m98 = context.globalVars.Get("SUBPROG_USE_M98", 1)
+            if use_m98:
+                context.write(f"M98 P{sub_num}")
+            else:
+                context.write(f"L{sub_num}")
+
+    elif is_endsub:
+        use_m99 = context.globalVars.Get("SUBPROG_USE_M99", 1)
+        if use_m99:
+            context.write("M99")
+        else:
+            context.write("M17")
+```
+
+**Вывод:**
+```nc
+N10 M98 P1001    ; Call subroutine 1001
+N12 M99          ; Return from subroutine
+```
+
+---
+
 ## Отладка
 
 ### Вывод отладочной информации
@@ -1130,6 +1685,8 @@ dotnet run -- -i input.apt -o output.nc -c siemens --debug
 
 ### Все доступные команды APT
 
+#### Базовые макросы (base/)
+
 | Команда | Описание | Макрос |
 |---------|----------|--------|
 | `GOTO` | Линейное перемещение | `base/goto.py` |
@@ -1137,11 +1694,25 @@ dotnet run -- -i input.apt -o output.nc -c siemens --debug
 | `SPINDL` | Управление шпинделем | `base/spindl.py` |
 | `COOLNT` | Управление охлаждением | `base/coolnt.py` |
 | `FEDRAT` | Управление подачей | `base/fedrat.py` |
-| `LOADTL` | Смена инструмента | `mmill/loadtl.py` |
-| `PARTNO` | Начало программы | `mmill/init.py` |
-| `FINI` | Конец программы | `mmill/fini.py` |
-| `RTCP` | Вкл/выкл RTCP | `mmill/rtcp.py` |
-| `ROTATE` | Поворот стола | `mmill/rotabl.py` |
+| `LOADTL` | Смена инструмента | `base/loadtl.py` |
+| `PARTNO` | Начало программы | `base/partno.py` |
+| `FINI` | Конец программы | `base/fini.py` |
+| `DELAY` | Пауза/выдержка времени | `base/delay.py` |
+| `SEQNO` | Управление нумерацией блоков | `base/seqno.py` |
+| `CUTCOM` | Радиусная компенсация | `base/cutcom.py` |
+| `FROM` | Начальная позиция | `base/from.py` |
+| `GOHOME` | Возврат в ноль | `base/gohome.py` |
+| `WPLANE` | Выбор рабочей плоскости | `base/wplane.py` |
+| `CYCLE81` | Сверлильный цикл | `base/cycle81.py` |
+| `CYCLE83` | Цикл глубокого сверления | `base/cycle83.py` |
+| `SUBPROG` | Подпрограммы | `base/subprog.py` |
+
+#### Контроллер-специфичные макросы (siemens/, fanuc/, etc.)
+
+| Команда | Описание | Макрос |
+|---------|----------|--------|
+| `RTCP` | Вкл/выкл RTCP | `siemens/rtcp.py` |
+| `ROTATE` | Поворот стола | `siemens/rotabl.py` |
 
 ---
 
