@@ -1,0 +1,130 @@
+{
+  "$schema": "machine-config-schema.json",
+  "name": "TOS KURIM FSQ100 O",
+  "controller": "siemens/840d",
+  "version": "1.0",
+  "description": "TOS KURIM FSQ-100 with Siemens Sinumerik 840D controller",
+
+  "axes": {
+    "linear": ["X", "Y", "Z"],
+    "rotary": ["A", "B"],
+    "primary": "X",
+    "secondary": "Y",
+    "tertiary": "Z"
+  },
+
+  "limits": {
+    "X": { "min": -500, "max": 1000 },
+    "Y": { "min": -300, "max": 600 },
+    "Z": { "min": -200, "max": 800 },
+    "B": { "min": -180, "max": 180 }
+  },
+
+  "discretization": {
+    "B": {
+      "enabled": true,
+      "increment": 1
+    },
+	"A": {
+		"enabled": true,
+		"increment": 1
+	}
+  },
+
+  "head": {
+    "orientation": "vertical",
+    "fiveAxisSupport": false,
+    "threePlusTwoSupport": true,
+    "headName": "VO",
+    "clampCommand": "M36",
+    "unclampCommand": "M37"
+  },
+
+  "table": {
+    "type": "rotary",
+    "axes": ["B"],
+    "discretization": {
+      "enabled": true,
+      "increment": 1
+    }
+  },
+
+  "positioning": {
+    "rapid": {
+      "order": ["X", "Y", "Z"],
+      "description": "Linear axes positioning"
+    },
+    "rotary": {
+      "beforeLinear": true,
+      "description": "Rotary axes before linear"
+    }
+  },
+
+  "fiveAxis": {
+    "enabled": false,
+    "transformation": null,
+    "cycle800": {
+      "enabled": false
+    },
+    "rtcp": {
+      "on": null,
+      "off": null
+    }
+  },
+
+  "toolChange": {
+    "format": "T=\"{toolname}\"",
+    "position": {
+      "X": null,
+      "Y": null,
+      "Z": 100
+    },
+    "beforeChange": [],
+    "afterChange": [
+      "TC",
+      "D1",
+      "FFWON",
+      "SOFT"
+    ]
+  },
+
+  "spindle": {
+    "maxRPM": 8000,
+    "defaultRPM": 1600,
+    "orientation": "vertical"
+  },
+
+  "coolant": {
+    "types": ["flood", "mist"],
+    "default": "flood"
+  },
+
+  "safety": {
+    "retractPlane": 50,
+    "clearanceHeight": 100,
+    "approachDistance": 5
+  },
+
+  "formatting": {
+    "blockNumber": {
+      "enabled": true,
+      "prefix": "N",
+      "increment": 2,
+      "start": 1
+    },
+    "coordinates": {
+      "decimals": 3,
+      "trailingZeros": true,
+      "decimalPoint": true
+    }
+  },
+
+  "macros": {
+    "init": "fsq100/init.py",
+    "fini": "fsq100/fini.py",
+    "toolChange": "fsq100/loadtl.py",
+    "toolInfo": "fsq100/tool_list.py",
+    "goto": "fsq100/goto.py",
+    "coolant": "fsq100/coolnt.py"
+  }
+}

@@ -62,22 +62,28 @@ public class PythonPostContext
     // === Методы вывода ===
     /// <summary>
     /// Записать строку через BlockWriter с автоматической модальностью
+    /// НЕ добавляет newline в конце - используйте writeBlock() для вывода блока
     /// </summary>
     public void write(string line, bool suppressBlock = false)
     {
         if (!string.IsNullOrWhiteSpace(line))
         {
-            _context.BlockWriter.WriteLine(line);
+            _context.Output.Write(line);
             _context.Output.Flush();
         }
     }
 
     /// <summary>
-    /// Записать строку напрямую (без BlockWriter)
+    /// Записать строку и сразу вывести блок с модальной проверкой
+    /// Добавляет newline после блока
     /// </summary>
     public void writeln(string line = "")
     {
-        _context.Output.WriteLine(line);
+        if (!string.IsNullOrWhiteSpace(line))
+        {
+            _context.Output.Write(line);
+        }
+        _context.BlockWriter.WriteBlock(true);
         _context.Output.Flush();
     }
 
@@ -104,10 +110,12 @@ public class PythonPostContext
     
     /// <summary>
     /// Записать NC-блок через BlockWriter
+    /// Добавляет newline в конце блока
     /// </summary>
     public void writeBlock(bool includeBlockNumber = true)
     {
         _context.BlockWriter.WriteBlock(includeBlockNumber);
+        _context.Output.WriteLine();  // Add newline after block
         _context.Output.Flush();
     }
     

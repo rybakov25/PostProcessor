@@ -215,7 +215,7 @@ public static class Program
             foreach (var path in validMacroPaths)
                 Console.WriteLine($"  {path.Replace(baseDir, "{bin}").Replace(solutionDir, "{solution}")}");
 
-            var pythonEngine = new PostProcessor.Macros.Python.PythonMacroEngine(controller, pythonMacroPaths.ToArray());
+            var pythonEngine = new PostProcessor.Macros.Python.PythonMacroEngine(machine, pythonMacroPaths.ToArray());
 
             Console.WriteLine("\nLoading Python macros...");
             var stopwatch = System.Diagnostics.Stopwatch.StartNew();
