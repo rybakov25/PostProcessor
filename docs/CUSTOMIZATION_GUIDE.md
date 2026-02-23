@@ -13,21 +13,29 @@
 3. [Создание конфигурации контроллера](#создание-конфигурации-контроллера)
 4. [Создание профиля станка](#создание-профиля-станка)
 5. [Создание Python макросов](#создание-python-макросов)
-6. [Использование пользовательских параметров](#использование-пользовательских-параметров)
-7. [Примеры настроек](#примеры-настроек)
-8. [Отладка](#отладка)
+6. [Использование StateCache в макросах](#использование-statecache-в-макросах)
+7. [Использование CycleCache](#использование-cyclecache)
+8. [Форматирование через NumericNCWord](#форматирование-через-numericncword)
+9. [Стиль комментариев через TextNCWord](#стиль-комментариев-через-textncword)
+10. [Использование пользовательских параметров](#использование-пользовательских-параметров)
+11. [Примеры настроек](#примеры-настроек)
+12. [Отладка](#отладка)
 
 ---
 
-## Обзор
+## Обзор (v1.1.0)
 
 Постпроцессор поддерживает **гибкую настройку** для любого оборудования через:
 
 | Компонент | Описание | Формат |
 |-----------|----------|--------|
 | **Конфигурации контроллеров** | Параметры стоек ЧПУ (Siemens, Fanuc, Heidenhain...) | JSON |
-| **Профили станков** | Специфика конкретных станков (фрезерные, токарные, многозадачные) | JSON |
+| **Профили станков** | Специфика конкретных станков | JSON |
 | **Python макросы** | Логика обработки APT-команд | Python |
+| **StateCache** | NEW: Кэш состояний LAST_* | C# + Python |
+| **CycleCache** | NEW: Кэширование циклов | C# + Python |
+| **NumericNCWord** | NEW: Форматирование из конфига | C# + Python |
+| **TextNCWord** | NEW: Стиль комментариев | C# + Python |
 
 **Принцип приоритета макросов:**
 ```
@@ -545,6 +553,175 @@ def execute(context, command):
 
 ---
 
+## Использование StateCache в макросах
+
+StateCache предоставляет кэширование переменных для модального вывода.
+
+### Пример: модальная подача
+
+```python
+# -*- coding: ascii -*-
+def execute(context, command):
+    feed = command.getNumeric(0, 0)
+    
+    # Проверка изменения через кэш
+    if context.cacheHasChanged("LAST_FEED", feed):
+        context.registers.f = feed
+        context.writeBlock()
+        context.cacheSet("LAST_FEED", feed)
+```
+
+### Пример: кэш инструмента
+
+```python
+# -*- coding: ascii -*-
+def execute(context, command):
+    tool_num = command.getNumeric(0, 0)
+    
+    if context.cacheHasChanged("LAST_TOOL", tool_num):
+        context.comment(f"Tool {tool_num}")
+        context.registers.t = tool_num
+        context.writeBlock()
+        context.cacheSet("LAST_TOOL", tool_num)
+```
+
+### Методы StateCache
+
+| Метод | Описание |
+|-------|----------|
+| `cacheGet(key, default)` | Получить значение |
+| `cacheSet(key, value)` | Установить значение |
+| `cacheHasChanged(key, value)` | Проверить изменение |
+| `cacheGetOrSet(key, default)` | Получить или установить |
+| `cacheReset(key)` | Сбросить значение |
+| `cacheResetAll()` | Сбросить весь кэш |
+
+---
+
+## Использование CycleCache
+
+CycleCache автоматически выбирает: полное определение цикла или только вызов.
+
+### Пример: CYCLE800
+
+```python
+# -*- coding: ascii -*-
+def execute(context, command):
+    params = {
+        'MODE': 1,
+        'TABLE': 'TABLE1',
+        'X': 100.0,
+        'Y': 200.0,
+        'Z': 50.0,
+        'A': 0.0,
+        'B': 45.0,
+        'C': 0.0
+    }
+    
+    # Умный вывод
+    context.cycleWriteIfDifferent("CYCLE800", params)
+```
+
+### Результат
+
+```nc
+; Первый вызов (полное определение)
+CYCLE800(MODE=1, TABLE="TABLE1", X=100.000, Y=200.000, Z=50.000, A=0.000, B=45.000, C=0.000)
+
+; Второй вызов (те же параметры - только вызов)
+CYCLE800()
+```
+
+### Методы CycleCache
+
+| Метод | Описание |
+|-------|----------|
+| `cycleWriteIfDifferent(name, params)` | Записать если отличается |
+| `cycleReset(name)` | Сбросить кэш |
+| `cycleGetCache(name)` | Получить кэш |
+
+---
+
+## Форматирование через NumericNCWord
+
+NumericNCWord предоставляет форматирование из JSON-конфига.
+
+### Пример: установка координаты
+
+```python
+# -*- coding: ascii -*-
+def execute(context, command):
+    x = command.getNumeric(0, 0)
+    
+    # Установка с форматированием из конфига
+    context.setNumericValue('X', x)
+    
+    # Получение отформатированной строки
+    xStr = context.getFormattedValue('X')  # "X100.500"
+    
+    context.writeBlock()
+```
+
+### Конфигурация
+
+```json
+{
+  "formatting": {
+    "coordinates": {
+      "decimals": 3,
+      "leadingZeros": true,
+      "trailingZeros": false
+    },
+    "feedrate": {
+      "decimals": 1,
+      "prefix": "F"
+    }
+  }
+}
+```
+
+---
+
+## Стиль комментариев через TextNCWord
+
+TextNCWord предоставляет комментарии со стилем из конфига.
+
+### Пример
+
+```python
+# -*- coding: ascii -*-
+def execute(context, command):
+    # Автоматически использует стиль из конфига
+    context.comment("Начало операции")
+    
+    # Siemens: (Начало операции)
+    # Haas: ; Начало операции
+```
+
+### Конфигурация стиля
+
+```json
+{
+  "formatting": {
+    "comments": {
+      "type": "parentheses",  // parentheses | semicolon | both
+      "maxLength": 128,
+      "transliterate": false
+    }
+  }
+}
+```
+
+### Стили
+
+| Стиль | type | Результат |
+|-------|------|-----------|
+| Parentheses | `"parentheses"` | `(Comment)` |
+| Semicolon | `"semicolon"` | `; Comment` |
+| Both | `"both"` | `(Comment) ; Comment` |
+
+---
+
 ## Использование пользовательских параметров
 
 ### В конфигурации
@@ -606,7 +783,7 @@ value = context.config.getParameter("enableHighSpeedMode", False)
 }
 ```
 
-### Siemens с 5-осевой обработкой
+### Siemens с 5-осевой обработкой и CycleCache
 
 ```json
 {
@@ -624,11 +801,50 @@ value = context.config.getParameter("enableHighSpeedMode", False)
     "tiltingAxis": "B",
     "useCycle800": true,
     "safeRetractHeight": 100.0
+  },
+  "formatting": {
+    "coordinates": {
+      "decimals": 3,
+      "leadingZeros": true,
+      "trailingZeros": false
+    },
+    "feedrate": {
+      "decimals": 1,
+      "prefix": "F"
+    },
+    "comments": {
+      "type": "parentheses",
+      "maxLength": 128,
+      "transliterate": false
+    }
   }
 }
 ```
 
-### Heidenhain с циклами
+**Пример макроса с CycleCache:**
+
+```python
+# -*- coding: ascii -*-
+# CYCLE800_MACRO - Поворот плоскости с кэшированием
+
+def execute(context, command):
+    """
+    CYCLE800 с умным кэшированием параметров
+    
+    APT: 5AXIS/ROTATE, B45, C0
+    """
+    params = {
+        'MODE': context.config.getParameterInt("cycle800Mode", 1),
+        'TABLE': context.config.getParameterString("cycle800Table", "TABLE"),
+        'B': command.getNumeric(0, 0.0),
+        'C': command.getNumeric(1, 0.0)
+    }
+    
+    # Умный вывод: полное определение или только вызов
+    context.cycleWriteIfDifferent("CYCLE800", params)
+```
+
+### Heidenhain с циклами и StateCache
 
 ```json
 {
@@ -642,8 +858,211 @@ value = context.config.getParameter("enableHighSpeedMode", False)
   "customGCodes": {
     "plane": "PLANE",
     "cycle": "CYCL DEF"
+  },
+  "formatting": {
+    "coordinates": {
+      "decimals": 3,
+      "leadingZeros": false,
+      "trailingZeros": true
+    },
+    "comments": {
+      "type": "semicolon",
+      "maxLength": 80
+    }
   }
 }
+```
+
+**Пример макроса с StateCache:**
+
+```python
+# -*- coding: ascii -*-
+# TOOL_CHANGE_MACRO - Смена инструмента с кэшем
+
+def execute(context, command):
+    """
+    TURRET с кэшированием последнего инструмента
+    
+    APT: TURRET/5
+    """
+    tool_num = command.getNumeric(0, 0)
+    
+    # Проверка изменения через StateCache
+    if context.cacheHasChanged("LAST_TOOL", tool_num):
+        context.comment(f"Tool {tool_num}")
+        context.registers.t = tool_num
+        context.writeBlock()
+        
+        # Сохранение в кэш
+        context.cacheSet("LAST_TOOL", tool_num)
+```
+
+### Интеграция с NumericNCWord и TextNCWord
+
+```json
+{
+  "name": "Custom Controller with Formatting",
+  "formatting": {
+    "coordinates": {
+      "decimals": 3,
+      "leadingZeros": true,
+      "trailingZeros": false,
+      "prefix": ""
+    },
+    "feedrate": {
+      "decimals": 0,
+      "prefix": "F"
+    },
+    "spindle": {
+      "decimals": 0,
+      "prefix": "S"
+    },
+    "comments": {
+      "type": "parentheses",
+      "maxLength": 128,
+      "transliterate": true,
+      "encodeSpecialChars": true
+    }
+  }
+}
+```
+
+**Пример макроса с NumericNCWord:**
+
+```python
+# -*- coding: ascii -*-
+# LINEAR_MOVE_MACRO - Линейное перемещение с форматированием
+
+def execute(context, command):
+    """
+    GO/TO с форматированием из конфига
+    
+    APT: GO/TO, 100.5, 200.3, 50.0
+    """
+    # Получение координат
+    x = command.getNumeric(0, 0.0)
+    y = command.getNumeric(1, 0.0)
+    z = command.getNumeric(2, 0.0)
+    
+    # Установка значений с форматированием из конфига
+    context.setNumericValue('X', x)
+    context.setNumericValue('Y', y)
+    context.setNumericValue('Z', z)
+    
+    # Запись блока с автоматическим форматированием
+    context.writeBlock()
+```
+
+**Пример макроса с TextNCWord:**
+
+```python
+# -*- coding: ascii -*-
+# COMMENT_MACRO - Комментарии со стилем
+
+def execute(context, command):
+    """
+    REMARK с автоматическим стилем из конфига
+    
+    APT: REMARK/Начало обработки
+    """
+    text = command.getText(0, "")
+    
+    # Комментарий автоматически использует стиль из конфига:
+    # - Siemens: (Начало обработки)
+    # - Haas: ; Начало обработки
+    context.comment(text)
+    
+    context.writeBlock()
+```
+
+### Полный пример: 5-осевая обработка с кэшированием
+
+```json
+{
+  "name": "DMG Mori DMU50 - Siemens 840D",
+  "controller": "siemens/840d",
+  "machineProfile": "dmu50_5axis",
+  
+  "formatting": {
+    "coordinates": {
+      "decimals": 3,
+      "leadingZeros": true,
+      "trailingZeros": false
+    },
+    "feedrate": {
+      "decimals": 1,
+      "prefix": "F"
+    },
+    "spindle": {
+      "decimals": 0,
+      "prefix": "S"
+    },
+    "comments": {
+      "type": "parentheses",
+      "maxLength": 128
+    }
+  },
+  
+  "multiAxis": {
+    "enableRtcp": true,
+    "strategy": "cartesian",
+    "rtcp": {
+      "on": "RTCPON",
+      "off": "RTCPOF"
+    },
+    "cycle800": {
+      "enabled": true,
+      "parameters": {
+        "mode": 1,
+        "table": "TABLE",
+        "rotation": "ROTATION"
+      }
+    }
+  },
+  
+  "customParameters": {
+    "useStateCache": true,
+    "useCycleCache": true,
+    "safeRetractHeight": 100.0,
+    "toolChangeHeight": 200.0
+  }
+}
+```
+
+**Комплексный макрос с StateCache + CycleCache + NumericNCWord:**
+
+```python
+# -*- coding: ascii -*-
+# FIVE_AXIS_MACRO - 5-осевая обработка с полным кэшированием
+
+def execute(context, command):
+    """
+    5AXIS/FEDRAT с кэшированием подачи и цикла
+    
+    APT: 5AXIS/FEDRAT, 5000, B45, C0
+    """
+    # Получение параметров
+    feed = command.getNumeric(0, 5000)
+    b_angle = command.getNumeric(1, 0.0)
+    c_angle = command.getNumeric(2, 0.0)
+    
+    # Кэширование подачи через StateCache
+    if context.cacheHasChanged("LAST_FEED", feed):
+        context.setNumericValue('F', feed)
+        context.cacheSet("LAST_FEED", feed)
+    
+    # Параметры цикла поворота
+    cycle_params = {
+        'MODE': 1,
+        'B': b_angle,
+        'C': c_angle
+    }
+    
+    # Умный вывод цикла через CycleCache
+    context.cycleWriteIfDifferent("CYCLE800", cycle_params)
+    
+    # Запись блока с форматированием NumericNCWord
+    context.writeBlock()
 ```
 
 ---
