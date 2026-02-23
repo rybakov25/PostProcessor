@@ -684,6 +684,197 @@ N20 RTCPOF
 
 ---
 
+## Продвинутые возможности v1.1.0
+
+### StateCache — кэш состояний (аналог SYSTEM.*)
+
+В IMSpost:
+```fortran
+IF (LAST_FEED .NE. FEDVAL) THEN
+  CALL OUTFED(FEDVAL)
+  LAST_FEED = FEDVAL
+ENDIF
+```
+
+В Python (PostProcessor v1.1.0):
+```python
+# -*- coding: ascii -*-
+def execute(context, command):
+    feed = command.getNumeric(0, 0)
+    
+    # Проверка изменения через кэш
+    if context.cacheHasChanged("LAST_FEED", feed):
+        context.registers.f = feed
+        context.writeBlock()
+        context.cacheSet("LAST_FEED", feed)
+```
+
+**Методы StateCache:**
+- `cacheGet(key, default)` — получить значение
+- `cacheSet(key, value)` — установить значение
+- `cacheHasChanged(key, value)` — проверить изменение
+- `cacheReset(key)` — сбросить значение
+
+### CycleCache — кэширование циклов
+
+В IMSpost:
+```fortran
+IF (CYCLE800_CACHED .EQV. .FALSE.) THEN
+  CALL OUTPUT_CYCLE800_FULL()
+  CYCLE800_CACHED = .TRUE.
+ELSE
+  CALL OUTPUT_CYCLE800_CALL()
+ENDIF
+```
+
+В Python (PostProcessor v1.1.0):
+```python
+# -*- coding: ascii -*-
+def execute(context, command):
+    params = {
+        'MODE': 1,
+        'TABLE': 'TABLE1',
+        'X': 100.0,
+        'Y': 200.0,
+        'Z': 50.0
+    }
+    
+    # Автоматический выбор: полное определение или вызов
+    context.cycleWriteIfDifferent("CYCLE800", params)
+```
+
+**Результат:**
+```nc
+; Первый вызов (полное определение)
+CYCLE800(MODE=1, TABLE="TABLE1", X=100.000, Y=200.000, Z=50.000)
+
+; Второй вызов (те же параметры - только вызов)
+CYCLE800()
+```
+
+### NumericNCWord — форматирование из конфига
+
+В IMSpost:
+```fortran
+CALL FORMAT_WORD('X{-#####!###}', XVAL, XSTR)
+CALL OUTPUT(XSTR)
+```
+
+В Python (PostProcessor v1.1.0):
+```python
+# -*- coding: ascii -*-
+def execute(context, command):
+    x = command.getNumeric(0, 0)
+    
+    # Установка с форматированием из конфига
+    context.setNumericValue('X', x)
+    
+    # Получение отформатированной строки
+    xStr = context.getFormattedValue('X')  # "X100.500"
+    
+    context.writeBlock()
+```
+
+**Конфигурация (configs/controllers/siemens/840d.json):**
+```json
+{
+  "formatting": {
+    "coordinates": {
+      "decimals": 3,
+      "leadingZeros": true,
+      "trailingZeros": false
+    }
+  }
+}
+```
+
+### TextNCWord — комментарии со стилем
+
+В IMSpost:
+```fortran
+CALL OUTCOM('Comment text')  ; Зависит от контроллера
+```
+
+В Python (PostProcessor v1.1.0):
+```python
+# -*- coding: ascii -*-
+def execute(context, command):
+    # Автоматически использует стиль из конфига
+    context.comment("Начало операции")
+    
+    # Siemens: (Начало операции)
+    # Haas: ; Начало операции
+    # Heidenhain: ; Начало операции
+```
+
+**Конфигурация стиля:**
+```json
+{
+  "formatting": {
+    "comments": {
+      "type": "parentheses",  // parentheses | semicolon | both
+      "maxLength": 128,
+      "transliterate": false
+    }
+  }
+}
+```
+
+**Стили комментариев:**
+
+| Стиль | type | Результат |
+|-------|------|-----------|
+| Parentheses | `"parentheses"` | `(Comment)` |
+| Semicolon | `"semicolon"` | `; Comment` |
+| Both | `"both"` | `(Comment) ; Comment` |
+
+---
+
+## Таблица соответствия IMSpost → Python (v1.1.0)
+
+| Функция IMSpost | Python (PostProcessor v1.1.0) |
+|-----------------|-------------------------------|
+| `CALL OUTAXS(XVAL)` | `context.registers.x = xval` |
+| `CALL OUTFED(FEDVAL)` | `context.cacheSet("LAST_FEED", fedval)` |
+| `CALL OUTSPD(RPM)` | `context.registers.s = rpm` |
+| `CALL OUTTOL(TOOLNO)` | `context.cacheSet("LAST_TOOL", toolno)` |
+| `CALL OUTCOM('Text')` | `context.comment("Text")` |
+| `CALL FORMAT_WORD()` | `context.setNumericValue()` |
+| `SYSTEM.PROGNAME` | `context.system["PROGNAME"]` |
+| `GLOBAL.MY_VAR` | `context.globalVars["MY_VAR"]` |
+| NEW: `cacheHasChanged()` | `context.cacheHasChanged("KEY", value)` |
+| NEW: `cycleWriteIfDifferent()` | `context.cycleWriteIfDifferent("CYCLE", params)` |
+
+---
+
+## Сравнение производительности
+
+### Кэширование состояний
+
+| Подход | IMSpost | PostProcessor v1.1.0 |
+|--------|---------|----------------------|
+| LAST_* переменные | Ручная проверка | StateCache (авто) |
+| Проверка изменения | `IF (OLD .NE. NEW)` | `cacheHasChanged()` |
+| Установка значения | `OLD = NEW` | `cacheSet()` |
+
+### Кэширование циклов
+
+| Подход | IMSpost | PostProcessor v1.1.0 |
+|--------|---------|----------------------|
+| CYCLE800 | Ручная логика | CycleCache (авто) |
+| Полное определение | `IF (CACHED .EQV. .FALSE.)` | Автоматически |
+| Только вызов | `CALL OUTPUT_CYCLE_CALL()` | Автоматически |
+
+### Форматирование
+
+| Подход | IMSpost | PostProcessor v1.1.0 |
+|--------|---------|----------------------|
+| Конфигурация | В коде постпроцессора | JSON-конфиг |
+| Паттерны | `CALL FORMAT_WORD('X{-#####!###}')` | Из конфига |
+| Ведущие нули | Ручная логика | `leadingZeros: true` |
+
+---
+
 ## Отладка
 
 Для отладки макросов используйте:

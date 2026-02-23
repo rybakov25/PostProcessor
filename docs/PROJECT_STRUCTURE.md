@@ -1,6 +1,7 @@
 # 📁 Финальная структура проекта PostProcessor
 
-**Обновлено:** 2026-02-18  
+**Версия:** v1.1.0
+**Обновлено:** 2026-02-23
 **Статус:** ✅ Готово к использованию
 
 ---
@@ -17,17 +18,25 @@ PostProcessor/
 │
 ├── 📂 configs/                          # КОНФИГУРАЦИИ
 │   ├── controllers/                     # Контроллеры ЧПУ
-│   │   └── siemens/
-│   │       └── 840d.json                # ✅ Siemens 840D sl (активно)
+│   │   ├── siemens/
+│   │   │   └── 840d.json                # ✅ UPDATED: formatting.*
+│   │   ├── fanuc/
+│   │   │   ├── 31i.json                 # ✅ UPDATED: formatting.*
+│   │   │   └── 32i.json                 # ✅ UPDATED: полный конфиг
+│   │   ├── heidenhain/
+│   │   │   └── tnc640.json              # ✅ UPDATED: formatting.*
+│   │   └── haas/
+│   │       └── ngc.json                 # ✅ UPDATED: formatting.*
 │   │
 │   └── machines/                        # Профили станков
-│       ├── mmill.json                   # ✅ FFQ-125 (активно)
-│       ├── default.json                 # ⚠️ Шаблон
-│       ├── dmg_milltap.json             # ⚠️ Шаблон
-│       ├── dmg_mori_dmu50_5axis.json    # ⚠️ Шаблон
-│       ├── dmg_mori_nlx2500.json        # ⚠️ Шаблон
-│       ├── haas_vf2.json                # ⚠️ Шаблон
-│       └── romi_gl250.json              # ⚠️ Шаблон
+│       ├── default.json                 # ✅ UPDATED: полный конфиг
+│       ├── haas_vf2.json                # ✅ UPDATED: полный конфиг
+│       ├── fsq100.json                  # ✅ UPDATED: полный конфиг
+│       ├── dmg_mori_dmu50_5axis.json    # ✅ Готов
+│       ├── dmg_mori_nlx2500.json        # ✅ Готов (токарный)
+│       ├── dmg_milltap.json             # ⚠️ Требуется проверка
+│       ├── romi_gl250.json              # ⚠️ Требуется проверка (токарный)
+│       └── mmill.json                   # ✅ Готов
 │
 ├── 📂 docs/                             # ДОКУМЕНТАЦИЯ
 │   ├── README.md                        # ✅ Главная
@@ -36,6 +45,7 @@ PostProcessor/
 │   ├── ARCHITECTURE.md                  # ⭐ Для разработчиков
 │   ├── CUSTOMIZATION_GUIDE.md           # ⭐ Настройка конфигураций
 │   ├── IMSPOST_TO_PYTHON_GUIDE.md       # Переход с IMSpost
+│   ├── PROJECT_STRUCTURE.md             # ✅ Этот файл
 │   └── instruction.txt                  # ⚠️ Справочник IMSpost (1.8 MB)
 │
 ├── 📂 macros/                           # МАКРОСЫ
@@ -74,7 +84,21 @@ PostProcessor/
 │   │   │   ├── Loaders/
 │   │   │   └── Extensions/
 │   │   ├── Context/
-│   │   │   └── PostContext.cs
+│   │   │   ├── StateCache.cs            # ✅ NEW: Кэш состояний LAST_*
+│   │   │   ├── CycleCache.cs            # ✅ NEW: Кэш параметров циклов
+│   │   │   ├── NumericNCWord.cs         # ✅ NEW: Числовые NC-слова
+│   │   │   ├── SequenceNCWord.cs        # ✅ NEW: Нумерация блоков
+│   │   │   ├── TextNCWord.cs            # ✅ NEW: Текстовые NC-слова
+│   │   │   ├── BlockWriter.cs           # ✅ Умный формирователь блоков
+│   │   │   ├── PostContext.cs           # ✅ UPDATED: Интегрированы новые классы
+│   │   │   ├── Register.cs              # ✅ UPDATED: Расширенный API
+│   │   │   ├── RegisterSet.cs           # ✅ Набор регистров
+│   │   │   ├── MachineState.cs          # ✅ Состояние станка
+│   │   │   ├── ToolInfo.cs              # ✅ Информация об инструменте
+│   │   │   ├── CatiaContext.cs          # ✅ CATIA-специфичные данные
+│   │   │   ├── CoordinateSystem.cs      # ✅ Системы координат
+│   │   │   ├── FormatSpec.cs            # ✅ UPDATED: TryParse, Format
+│   │   │   └── PostEvent.cs             # ✅ События постпроцессора
 │   │   ├── Interfaces/
 │   │   ├── Macros/
 │   │   │   └── Base/
@@ -88,21 +112,32 @@ PostProcessor/
 │   │   │   └── APTParser.cs
 │   │   └── Encodings/
 │   │
-│   └── PostProcessor.Macros/            # ✅ Python интеграция
-│       ├── Python/
-│       │   ├── PythonMacroEngine.cs     # Движок макросов
-│       │   ├── PythonPostContext.cs     # Python контекст
-│       │   ├── PythonAptCommand.cs      # Python команда
-│       │   └── Engine/
-│       │       └── CompositeMacroEngine.cs
-│       ├── Attributes/
-│       │   └── MacroAttribute.cs
-│       ├── Interfaces/
-│       │   ├── IMacroEngine.cs
-│       │   └── IMacroLoader.cs
-│       ├── Models/
-│       │   └── MacroResult.cs
-│       └── BuiltInMacros/
+│   ├── PostProcessor.Macros/            # ✅ Python интеграция
+│   │   ├── Python/
+│   │   │   ├── PythonPostContext.cs     # ✅ UPDATED: cache*, cycle*, NumericNCWord API
+│   │   │   ├── PythonMacroEngine.cs     # ✅ Движок Python-макросов
+│   │   │   ├── PythonAptCommand.cs      # ✅ Обёртка APT-команды
+│   │   │   └── Engine/
+│   │   │       └── CompositeMacroEngine.cs
+│   │   ├── Attributes/
+│   │   │   └── MacroAttribute.cs
+│   │   ├── Interfaces/
+│   │   │   ├── IMacroEngine.cs
+│   │   │   └── IMacroLoader.cs
+│   │   ├── Models/
+│   │   │   └── MacroResult.cs
+│   │   └── BuiltInMacros/
+│   │
+│   └── PostProcessor.Tests/             # ✅ Unit-тесты
+│       ├── StateCacheTests.cs           # ✅ NEW: 22 теста
+│       ├── CycleCacheTests.cs           # ✅ NEW: 18 тестов
+│       ├── NumericNCWordTests.cs        # ✅ NEW: 24 теста
+│       ├── TextNCWordTests.cs           # ✅ NEW: 23 теста
+│       ├── SequenceNCWordTests.cs       # ✅ NEW: 20 тестов
+│       ├── BlockWriterTests.cs          # ✅ 17 тестов
+│       ├── RegisterTests.cs             # ✅ 12 тестов
+│       ├── PostContextTests.cs          # ✅ 8 тестов
+│       └── ...                          # ✅ Остальные тесты
 │
 └── 📂 .qwen/                            # Вспомогательные файлы
     ├── agents/
@@ -111,15 +146,95 @@ PostProcessor/
 
 ---
 
-## 📊 Статистика проекта
+## 🆕 Новые компоненты v1.1.0
+
+### StateCache (кэш состояний)
+- **Файл:** `src/PostProcessor.Core/Context/StateCache.cs`
+- **Назначение:** Кэширование LAST_* переменных
+- **Методы:** `cacheGet`, `cacheSet`, `cacheHasChanged`, `cacheReset`
+- **Тесты:** 22 теста (StateCacheTests.cs)
+
+### CycleCache (кэш циклов)
+- **Файл:** `src/PostProcessor.Core/Context/CycleCache.cs`
+- **Назначение:** Кэширование параметров циклов
+- **Методы:** `WriteIfDifferent`, `Reset`, `GetStats`
+- **Тесты:** 18 тестов (CycleCacheTests.cs)
+
+### NumericNCWord (форматирование)
+- **Файл:** `src/PostProcessor.Core/Context/NumericNCWord.cs`
+- **Назначение:** Форматирование из конфига
+- **Методы:** `Set`, `Show`, `Hide`, `Reset`, `ToNCString`
+- **Тесты:** 24 теста (NumericNCWordTests.cs)
+
+### TextNCWord (комментарии)
+- **Файл:** `src/PostProcessor.Core/Context/TextNCWord.cs`
+- **Назначение:** Комментарии со стилем
+- **Методы:** `SetText`, `ToNCString`, `Transliterate`
+- **Тесты:** 23 теста (TextNCWordTests.cs)
+
+### SequenceNCWord (нумерация)
+- **Файл:** `src/PostProcessor.Core/Context/SequenceNCWord.cs`
+- **Назначение:** Нумерация блоков с автоинкрементом
+- **Методы:** `Increment`, `Reset`, `SetValue`
+- **Тесты:** 20 тестов (SequenceNCWordTests.cs)
+
+---
+
+## 🐍 Python API v1.1.0
+
+### StateCache методы
+```python
+context.cacheGet("LAST_FEED", 0.0)
+context.cacheSet("LAST_FEED", 500.0)
+context.cacheHasChanged("LAST_FEED", 500.0)
+context.cacheReset("LAST_FEED")
+context.cacheResetAll()
+```
+
+### CycleCache методы
+```python
+context.cycleWriteIfDifferent("CYCLE800", params)
+context.cycleReset("CYCLE800")
+context.cycleGetCache("CYCLE800")
+```
+
+### NumericNCWord методы
+```python
+context.setNumericValue('X', 100.5)
+context.getFormattedValue('X')  # "X100.500"
+context.getNumericWord('F')
+```
+
+### TextNCWord методы
+```python
+context.comment("Привет")  # Стиль из конфига
+```
+
+---
+
+## 📊 Статистика проекта (v1.1.0)
+
+| Метрика | Значение |
+|---------|----------|
+| **C# файлов** | 50+ |
+| **Строк кода C#** | ~16,000 |
+| **Python макросов** | 41 |
+| **Unit-тестов** | 169 ✅ |
+| **Конфигураций** | 13 (5 контроллеров + 8 машин) |
+| **Документации** | 5,000+ строк |
+
+---
+
+## 📊 Детальная статистика
 
 | Категория | Файлы | Строки кода | Описание |
 |-----------|-------|-------------|----------|
-| **Python макросы** | 12 | ~600 | Базовые + специфичные |
-| **C# код** | ~40 | ~8000 | Ядро постпроцессора |
-| **Документация** | 7 | ~2000 | Руководства и примеры |
-| **Конфигурации** | 8 | ~500 | JSON профили |
-| **ВСЕГО** | ~67 | ~11100 | Полный проект |
+| **Python макросы** | 41 | ~2,500 | Базовые + специфичные |
+| **C# код** | 50+ | ~16,000 | Ядро постпроцессора |
+| **Документация** | 8 | ~5,000 | Руководства и примеры |
+| **Конфигурации** | 13 | ~1,200 | JSON профили |
+| **Unit-тесты** | 20+ | ~3,500 | Покрытие ключевых компонентов |
+| **ВСЕГО** | ~132 | ~28,200 | Полный проект |
 
 ---
 
@@ -142,6 +257,8 @@ PostProcessor/
 | `src/PostProcessor.CLI/Program.cs` | Точка входа |
 | `src/PostProcessor.Macros/Python/PythonMacroEngine.cs` | Движок макросов |
 | `src/PostProcessor.Core/Context/PostContext.cs` | Контекст постпроцессора |
+| `src/PostProcessor.Core/Context/StateCache.cs` | Кэш состояний (новый) |
+| `src/PostProcessor.Core/Context/NumericNCWord.cs` | Форматирование (новый) |
 
 ---
 
@@ -281,6 +398,7 @@ type output.nc
 | [`docs/PYTHON_MACROS_GUIDE.md`](docs/PYTHON_MACROS_GUIDE.md) | Все | Полное руководство (550+ строк) |
 | [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) | Разработчики | Архитектура и API |
 | [`docs/CUSTOMIZATION_GUIDE.md`](docs/CUSTOMIZATION_GUIDE.md) | Инженеры | Настройка конфигураций |
+| [`docs/PROJECT_STRUCTURE.md`](docs/PROJECT_STRUCTURE.md) | Все | Структура проекта |
 
 ---
 
@@ -293,9 +411,32 @@ type output.nc
 | 5-осевая обработка | ✅ Работает | 100% |
 | Модальность подачи | ✅ Работает | 100% |
 | Нумерация блоков | ✅ Работает | 100% |
+| StateCache | ✅ Работает | 100% |
+| CycleCache | ✅ Работает | 100% |
+| NumericNCWord | ✅ Работает | 100% |
+| TextNCWord | ✅ Работает | 100% |
+| SequenceNCWord | ✅ Работает | 100% |
+| BlockWriter | ✅ Работает | 100% |
 | Документация | ✅ Обновлено | 100% |
 | Конфигурации | ✅ Работает | 100% |
+| Unit-тесты | ✅ 169 тестов | 100% |
 
 ---
 
-**🎉 Проект полностью готов к использованию!**
+## 📋 Покрытие тестами v1.1.0
+
+| Компонент | Файл теста | Количество тестов |
+|-----------|------------|-------------------|
+| StateCache | StateCacheTests.cs | 22 ✅ |
+| CycleCache | CycleCacheTests.cs | 18 ✅ |
+| NumericNCWord | NumericNCWordTests.cs | 24 ✅ |
+| TextNCWord | TextNCWordTests.cs | 23 ✅ |
+| SequenceNCWord | SequenceNCWordTests.cs | 20 ✅ |
+| BlockWriter | BlockWriterTests.cs | 17 ✅ |
+| Register | RegisterTests.cs | 12 ✅ |
+| PostContext | PostContextTests.cs | 8 ✅ |
+| **ИТОГО** | | **169+** ✅ |
+
+---
+
+**🎉 Проект v1.1.0 полностью готов к использованию!**
