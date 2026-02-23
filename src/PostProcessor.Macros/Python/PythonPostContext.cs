@@ -139,7 +139,49 @@ public class PythonPostContext
     {
         return CycleCacheHelper.GetOrCreate(_context, cycleName);
     }
-    
+
+    // === NumericNCWord методы ===
+
+    /// <summary>
+    /// Получить NumericNCWord по адресу
+    /// </summary>
+    /// <param name="address">Адрес (X, Y, Z, F, S...)</param>
+    /// <returns>NumericNCWord</returns>
+    public NumericNCWord getNumericWord(string address)
+    {
+        return _context.GetNumericWord(address);
+    }
+
+    /// <summary>
+    /// Установить значение регистра через NumericNCWord (с форматированием из конфига)
+    /// </summary>
+    /// <param name="address">Адрес регистра</param>
+    /// <param name="value">Значение</param>
+    public void setNumericValue(string address, double value)
+    {
+        _context.SetNumericValue(address, value);
+    }
+
+    /// <summary>
+    /// Получить отформатированное значение регистра
+    /// </summary>
+    /// <param name="address">Адрес регистра</param>
+    /// <returns>Отформатированная строка</returns>
+    public string getFormattedValue(string address)
+    {
+        var word = getNumericWord(address);
+        return word.ToNCString();
+    }
+
+    /// <summary>
+    /// Записать комментарий с использованием стиля из конфига
+    /// </summary>
+    /// <param name="text">Текст комментария</param>
+    public void writeComment(string text)
+    {
+        comment(text);
+    }
+
     // === Методы вывода ===
     /// <summary>
     /// Записать строку через BlockWriter с автоматической модальностью
@@ -170,12 +212,13 @@ public class PythonPostContext
 
     /// <summary>
     /// Записать комментарий в формате станка
+    /// Использует стиль из конфига (parentheses/semicolon/both)
     /// </summary>
     public void comment(string text)
     {
         if (!string.IsNullOrWhiteSpace(text))
         {
-            _context.BlockWriter.WriteComment(text);
+            _context.Comment(text);
             _context.Output.Flush();
         }
     }

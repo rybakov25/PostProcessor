@@ -53,6 +53,11 @@ public class PostContext : IAsyncDisposable
     /// </summary>
     public ControllerConfig Config { get; set; } = new();
 
+    /// <summary>
+    /// Словарь NumericNCWord для форматирования по конфига
+    /// </summary>
+    public Dictionary<string, NumericNCWord> NumericWords { get; } = new();
+
     private bool _disposed = false;
 
     private int _commandCount;
@@ -61,17 +66,33 @@ public class PostContext : IAsyncDisposable
 
     public (int CommandCount, int MotionCount, int ToolChanges) GetStatistics() => (_commandCount, _motionCount, _toolChanges);
 
-    public PostContext(StreamWriter output)
+    public PostContext(StreamWriter output, ControllerConfig? config = null)
     {
         Output = output;
+        Config = config ?? new ControllerConfig();
         BlockWriter = new BlockWriter(output);
-        
+
         // Регистрация регистров в BlockWriter для автоматического отслеживания
         BlockWriter.AddWords(
             Registers.X, Registers.Y, Registers.Z,
             Registers.A, Registers.B, Registers.C,
             Registers.F, Registers.S, Registers.T
         );
+
+        // Создание NumericNCWord из конфига
+        InitializeNumericWords();
+    }
+
+    /// <summary>
+    /// Инициализировать NumericNCWord из конфига
+    /// </summary>
+    private void InitializeNumericWords()
+    {
+        var addresses = new[] { "X", "Y", "Z", "A", "B", "C", "F", "S", "T", "I", "J", "K" };
+        foreach (var addr in addresses)
+        {
+            NumericWords[addr] = new NumericNCWord(Config, addr);
+        }
     }
 
     /// <summary>
@@ -161,6 +182,54 @@ public class PostContext : IAsyncDisposable
     public void ResetCycleCache(string cycleName)
     {
         CycleCacheHelper.Reset(this, cycleName);
+    }
+
+    // === NumericNCWord методы ===
+
+    /// <summary>
+    /// Получить NumericNCWord по адресу
+    /// </summary>
+    /// <param name="address">Адрес (X, Y, Z, F, S...)</param>
+    /// <returns>NumericNCWord</returns>
+    public NumericNCWord GetNumericWord(string address)
+    {
+        if (NumericWords.TryGetValue(address.ToUpperInvariant(), out var word))
+            return word;
+
+        // Создать новый если не найден
+        var newWord = new NumericNCWord(Config, address.ToUpperInvariant());
+        NumericWords[address.ToUpperInvariant()] = newWord;
+        return newWord;
+    }
+
+    /// <summary>
+    /// Установить значение регистра через NumericNCWord
+    /// </summary>
+    /// <param name="address">Адрес регистра</param>
+    /// <param name="value">Значение</param>
+    public void SetNumericValue(string address, double value)
+    {
+        var word = GetNumericWord(address);
+        word.v = value;
+    }
+
+    /// <summary>
+    /// Записать комментарий с использованием стиля из конфига
+    /// </summary>
+    /// <param name="text">Текст комментария</param>
+    public void Comment(string text)
+    {
+        var comment = new TextNCWord(Config, text);
+        BlockWriter.WriteLine(comment.ToNCString());
+    }
+
+    /// <summary>
+    /// Записать строку с нумерацией блока из конфига
+    /// </summary>
+    /// <param name="text">Текст строки</param>
+    public void WriteLine(string text)
+    {
+        BlockWriter.WriteLine(text);
     }
 
     public async IAsyncEnumerable<PostEvent> ProcessCommandAsync(APTCommand command)
@@ -554,15 +623,7 @@ public class PostContext : IAsyncDisposable
     {
         BlockWriter.WriteLine(text);
     }
-    
-    /// <summary>
-    /// Записать комментарий в формате станка
-    /// </summary>
-    public void Comment(string text)
-    {
-        BlockWriter.WriteComment(text);
-    }
-    
+
     /// <summary>
     /// Скрыть регистры (не выводить до изменения)
     /// </summary>
