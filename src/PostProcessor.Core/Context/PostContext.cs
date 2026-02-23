@@ -17,6 +17,11 @@ public class PostContext : IAsyncDisposable
     public BlockWriter BlockWriter { get; }
 
     /// <summary>
+    /// Кэш состояний для отслеживания изменений переменных (IMSPost-style LAST_* variables)
+    /// </summary>
+    public StateCache StateCache { get; } = new();
+
+    /// <summary>
     /// Параметры безопасности станка (ограничения хода, максимальные скорости)
     /// </summary>
     public SafetyParameters SafetyParameters { get; set; } = new SafetyParameters();
@@ -85,6 +90,77 @@ public class PostContext : IAsyncDisposable
         return _systemVariables.TryGetValue(name, out var value) && value is T typedValue
             ? typedValue
             : defaultValue;
+    }
+
+    // === StateCache методы (IMSPost-style LAST_* variables) ===
+
+    /// <summary>
+    /// Проверить, изменилось ли значение по сравнению с кэшем
+    /// </summary>
+    public bool HasStateChanged<T>(string key, T currentValue)
+    {
+        return StateCache.HasChanged(key, currentValue);
+    }
+
+    /// <summary>
+    /// Обновить значение в кэше состояний
+    /// </summary>
+    public void UpdateState<T>(string key, T value)
+    {
+        StateCache.Update(key, value);
+    }
+
+    /// <summary>
+    /// Получить значение из кэша состояний
+    /// </summary>
+    public T GetState<T>(string key, T defaultValue = default!)
+    {
+        return StateCache.Get(key, defaultValue);
+    }
+
+    /// <summary>
+    /// Получить или установить значение в кэше состояний
+    /// </summary>
+    public T GetOrSetState<T>(string key, T defaultValue = default!)
+    {
+        return StateCache.GetOrSet(key, defaultValue);
+    }
+
+    /// <summary>
+    /// Сбросить значение из кэша состояний
+    /// </summary>
+    public void ResetState(string key)
+    {
+        StateCache.Remove(key);
+    }
+
+    /// <summary>
+    /// Сбросить весь кэш состояний
+    /// </summary>
+    public void ResetAllStates()
+    {
+        StateCache.Clear();
+    }
+
+    // === CycleCache методы ===
+
+    /// <summary>
+    /// Записать цикл, если параметры отличаются от закэшированных
+    /// </summary>
+    /// <param name="cycleName">Имя цикла (например, "CYCLE800")</param>
+    /// <param name="parameters">Параметры цикла</param>
+    /// <returns>true если записано полное определение</returns>
+    public bool WriteCycleIfDifferent(string cycleName, Dictionary<string, object> parameters)
+    {
+        return CycleCacheHelper.WriteIfDifferent(this, cycleName, parameters);
+    }
+
+    /// <summary>
+    /// Сбросить кэш цикла
+    /// </summary>
+    public void ResetCycleCache(string cycleName)
+    {
+        CycleCacheHelper.Reset(this, cycleName);
     }
 
     public async IAsyncEnumerable<PostEvent> ProcessCommandAsync(APTCommand command)

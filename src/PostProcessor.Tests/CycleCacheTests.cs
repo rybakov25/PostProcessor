@@ -1,175 +1,159 @@
-using System;
 using System.IO;
 using PostProcessor.Core.Context;
-using PostProcessor.Macros.Python;
 
 namespace PostProcessor.Tests;
 
 /// <summary>
-/// Tests for Python CycleCache functionality
+/// Tests for CycleCache functionality
 /// </summary>
-public class CycleCacheTests : IDisposable
+public class CycleCacheTests
 {
-    private readonly MemoryStream _memoryStream;
-    private readonly StreamWriter _streamWriter;
-    private readonly PostContext _context;
-    private readonly PythonPostContext _pythonContext;
+    private readonly StringWriter _stringWriter;
+    private readonly BlockWriter _blockWriter;
 
     public CycleCacheTests()
     {
-        _memoryStream = new MemoryStream();
-        _streamWriter = new StreamWriter(_memoryStream);
-        _context = new PostContext(_streamWriter);
-        _pythonContext = new PythonPostContext(_context);
+        _stringWriter = new StringWriter();
+        _blockWriter = new BlockWriter(_stringWriter);
     }
-    
-    private string GetOutput()
+
+    [Fact]
+    public void Constructor_InitializesWithName()
     {
-        _streamWriter.Flush();
-        _memoryStream.Position = 0;
-        using var reader = new StreamReader(_memoryStream);
-        return reader.ReadToEnd();
-    }
-    
-    private void ClearOutput()
-    {
-        _streamWriter.Flush();
-        _memoryStream.SetLength(0);
+        // Act
+        var cache = new CycleCache("CYCLE800");
+
+        // Assert
+        Assert.Equal("CYCLE800", cache.CycleName);
     }
 
     [Fact]
     public void WriteIfDifferent_FirstCall_WritesFullDefinition()
     {
         // Arrange
-        var cache = new PythonCycleCache(_pythonContext, "CYCLE800");
-        var parameters = new System.Collections.Generic.Dictionary<string, object>
+        var cache = new CycleCache("CYCLE81");
+        var parameters = new Dictionary<string, object>
         {
-            { "MODE", 1 },
-            { "TABLE", "TABLE1" },
-            { "X", 100.0 },
-            { "Y", 200.0 },
-            { "Z", 50.0 }
+            { "RTP", 10.0 },
+            { "RFP", 0.0 },
+            { "SDIS", 5.0 },
+            { "DP", -20.0 }
         };
 
         // Act
-        var result = cache.WriteIfDifferent(parameters);
+        var result = cache.WriteIfDifferent(_blockWriter, parameters);
 
         // Assert
         Assert.True(result); // Full definition written
-        var output = GetOutput();
-        Assert.Contains("CYCLE800", output);
-        Assert.Contains("MODE=1", output);
-        Assert.Contains("TABLE=\"TABLE1\"", output);
+        var output = _stringWriter.ToString();
+        Assert.Contains("CYCLE81", output);
+        Assert.Contains("RTP=", output);
     }
 
     [Fact]
     public void WriteIfDifferent_SameParameters_WritesCallOnly()
     {
         // Arrange
-        var cache = new PythonCycleCache(_pythonContext, "CYCLE800");
-        var parameters = new System.Collections.Generic.Dictionary<string, object>
+        var cache = new CycleCache("CYCLE81");
+        var parameters = new Dictionary<string, object>
         {
-            { "MODE", 1 },
-            { "X", 100.0 }
+            { "RTP", 10.0 },
+            { "DP", -20.0 }
         };
 
         // Act - First call
-        cache.WriteIfDifferent(parameters);
-        
+        cache.WriteIfDifferent(_blockWriter, parameters);
+
         // Clear output
-        ClearOutput();
-        
+        _stringWriter.GetStringBuilder().Clear();
+
         // Second call with same parameters
-        var result = cache.WriteIfDifferent(parameters);
+        var result = cache.WriteIfDifferent(_blockWriter, parameters);
 
         // Assert
         Assert.False(result); // Call only written
-        var output = GetOutput();
-        Assert.Contains("CYCLE800()", output);
-        Assert.DoesNotContain("MODE=", output);
+        var output = _stringWriter.ToString();
+        Assert.Contains("CYCLE81()", output);
     }
 
     [Fact]
     public void WriteIfDifferent_DifferentParameters_WritesFullDefinition()
     {
         // Arrange
-        var cache = new PythonCycleCache(_pythonContext, "CYCLE800");
-        var parameters1 = new System.Collections.Generic.Dictionary<string, object>
+        var cache = new CycleCache("CYCLE81");
+        var parameters1 = new Dictionary<string, object>
         {
-            { "MODE", 1 },
-            { "X", 100.0 }
+            { "RTP", 10.0 },
+            { "DP", -20.0 }
         };
-        var parameters2 = new System.Collections.Generic.Dictionary<string, object>
+        var parameters2 = new Dictionary<string, object>
         {
-            { "MODE", 1 },
-            { "X", 150.0 } // Different X
+            { "RTP", 15.0 }, // Different RTP
+            { "DP", -20.0 }
         };
 
         // Act - First call
-        cache.WriteIfDifferent(parameters1);
-        
+        cache.WriteIfDifferent(_blockWriter, parameters1);
+
         // Clear output
-        ClearOutput();
-        
+        _stringWriter.GetStringBuilder().Clear();
+
         // Second call with different parameters
-        var result = cache.WriteIfDifferent(parameters2);
+        var result = cache.WriteIfDifferent(_blockWriter, parameters2);
 
         // Assert
         Assert.True(result); // Full definition written
-        var output = GetOutput();
-        Assert.Contains("CYCLE800", output);
-        Assert.Contains("X=150.000", output);
+        var output = _stringWriter.ToString();
+        Assert.Contains("CYCLE81", output);
+        Assert.Contains("RTP=15.000", output);
     }
 
     [Fact]
     public void Reset_ClearsCache()
     {
         // Arrange
-        var cache = new PythonCycleCache(_pythonContext, "CYCLE800");
-        var parameters = new System.Collections.Generic.Dictionary<string, object>
+        var cache = new CycleCache("CYCLE81");
+        var parameters = new Dictionary<string, object>
         {
-            { "MODE", 1 },
-            { "X", 100.0 }
+            { "RTP", 10.0 }
         };
 
         // Act - First call
-        cache.WriteIfDifferent(parameters);
-        
-        // Reset cache
+        cache.WriteIfDifferent(_blockWriter, parameters);
+
+        // Reset
         cache.Reset();
-        
+
         // Clear output
-        ClearOutput();
-        
+        _stringWriter.GetStringBuilder().Clear();
+
         // Second call with same parameters (should write full definition after reset)
-        var result = cache.WriteIfDifferent(parameters);
+        var result = cache.WriteIfDifferent(_blockWriter, parameters);
 
         // Assert
         Assert.True(result); // Full definition written after reset
-        var output = GetOutput();
-        Assert.Contains("CYCLE800", output);
-        Assert.Contains("MODE=", output);
     }
 
     [Fact]
     public void GetStats_ReturnsCorrectStatistics()
     {
         // Arrange
-        var cache = new PythonCycleCache(_pythonContext, "CYCLE800");
-        var parameters = new System.Collections.Generic.Dictionary<string, object>
+        var cache = new CycleCache("CYCLE800");
+        var parameters = new Dictionary<string, object>
         {
             { "MODE", 1 }
         };
 
-        // Act
-        cache.WriteIfDifferent(parameters);
-        cache.WriteIfDifferent(parameters);
-        cache.WriteIfDifferent(parameters);
+        // Act - Multiple calls
+        cache.WriteIfDifferent(_blockWriter, parameters);
+        cache.WriteIfDifferent(_blockWriter, parameters);
+        cache.WriteIfDifferent(_blockWriter, parameters);
         var stats = cache.GetStats();
 
         // Assert
         Assert.Equal("CYCLE800", stats["cycle_name"]);
         Assert.Equal(3, stats["call_count"]);
+        Assert.Equal(1, stats["full_definition_count"]);
         Assert.True((bool)stats["is_cached"]);
     }
 
@@ -177,18 +161,18 @@ public class CycleCacheTests : IDisposable
     public void FormatParams_FloatValues_FormatsWithThreeDecimals()
     {
         // Arrange
-        var cache = new PythonCycleCache(_pythonContext, "CYCLE81");
-        var parameters = new System.Collections.Generic.Dictionary<string, object>
+        var cache = new CycleCache("CYCLE81");
+        var parameters = new Dictionary<string, object>
         {
             { "RTP", 10.5678 },
             { "RFP", 0.1234 }
         };
 
         // Act
-        cache.WriteIfDifferent(parameters);
+        cache.WriteIfDifferent(_blockWriter, parameters);
 
         // Assert
-        var output = GetOutput();
+        var output = _stringWriter.ToString();
         Assert.Contains("RTP=10.568", output); // Rounded to 3 decimals
         Assert.Contains("RFP=0.123", output);
     }
@@ -197,115 +181,178 @@ public class CycleCacheTests : IDisposable
     public void FormatParams_StringValues_WrapsInQuotes()
     {
         // Arrange
-        var cache = new PythonCycleCache(_pythonContext, "CYCLE800");
-        var parameters = new System.Collections.Generic.Dictionary<string, object>
+        var cache = new CycleCache("CYCLE800");
+        var parameters = new Dictionary<string, object>
         {
             { "TABLE", "MY_TABLE" }
         };
 
         // Act
-        cache.WriteIfDifferent(parameters);
+        cache.WriteIfDifferent(_blockWriter, parameters);
 
         // Assert
-        var output = GetOutput();
+        var output = _stringWriter.ToString();
         Assert.Contains("TABLE=\"MY_TABLE\"", output);
     }
 
-    public void Dispose()
+    [Fact]
+    public void FormatParams_IntValues_FormatsAsInteger()
     {
-        _streamWriter.Dispose();
-        _memoryStream.Dispose();
-        _context.DisposeAsync().AsTask().Wait();
-    }
-}
-
-/// <summary>
-/// C# wrapper for Python CycleCache class for testing
-/// </summary>
-public class PythonCycleCache
-{
-    private readonly PythonPostContext _context;
-    private readonly string _cycleName;
-    private string? _cachedParams;
-    private int _callCount;
-
-    public PythonCycleCache(PythonPostContext context, string cycleName)
-    {
-        _context = context;
-        _cycleName = cycleName;
-        _cachedParams = null;
-        _callCount = 0;
-    }
-
-    public bool WriteIfDifferent(System.Collections.Generic.Dictionary<string, object> parameters)
-    {
-        // Sort parameters for stable comparison
-        var paramsStr = string.Join(",", parameters.OrderBy(kvp => kvp.Key)
-            .Select(kvp => $"{kvp.Key}={kvp.Value}"));
-
-        _callCount++;
-
-        if (_cachedParams == paramsStr)
+        // Arrange
+        var cache = new CycleCache("CYCLE81");
+        var parameters = new Dictionary<string, object>
         {
-            // Same parameters - write call only
-            _context.write($"{_cycleName}()");
-            return false;
-        }
-        else
-        {
-            // Different parameters - write full definition
-            var formatted = FormatParams(parameters);
-            _context.write($"{_cycleName}({formatted})");
-            _cachedParams = paramsStr;
-            return true;
-        }
-    }
-
-    public void Reset()
-    {
-        _cachedParams = null;
-        _callCount = 0;
-    }
-
-    public System.Collections.Generic.Dictionary<string, object> GetStats()
-    {
-        return new System.Collections.Generic.Dictionary<string, object>
-        {
-            { "cycle_name", _cycleName },
-            { "call_count", _callCount },
-            { "is_cached", _cachedParams != null }
+            { "MODE", 1 },
+            { "COUNT", 42 }
         };
+
+        // Act
+        cache.WriteIfDifferent(_blockWriter, parameters);
+
+        // Assert
+        var output = _stringWriter.ToString();
+        Assert.Contains("MODE=1", output);
+        Assert.Contains("COUNT=42", output);
     }
 
-    private string FormatParams(System.Collections.Generic.Dictionary<string, object> parameters)
+    [Fact]
+    public void FormatParams_BoolValues_FormatsAsOneOrZero()
     {
-        var parts = new System.Collections.Generic.List<string>();
-
-        foreach (var kvp in parameters)
+        // Arrange
+        var cache = new CycleCache("CYCLE800");
+        var parameters = new Dictionary<string, object>
         {
-            string formattedValue;
+            { "ENABLED", true },
+            { "DISABLED", false }
+        };
 
-            if (kvp.Value is double doubleValue)
-            {
-                // Use InvariantCulture for consistent formatting (dot as decimal separator)
-                formattedValue = doubleValue.ToString("F3", System.Globalization.CultureInfo.InvariantCulture);
-            }
-            else if (kvp.Value is string stringValue)
-            {
-                formattedValue = $"\"{stringValue}\"";
-            }
-            else
-            {
-                formattedValue = kvp.Value.ToString();
-            }
-            
-            parts.Add($"{kvp.Key}={formattedValue}");
-        }
-        
-        return string.Join(", ", parts);
+        // Act
+        cache.WriteIfDifferent(_blockWriter, parameters);
+
+        // Assert
+        var output = _stringWriter.ToString();
+        Assert.Contains("ENABLED=1", output);
+        Assert.Contains("DISABLED=0", output);
+    }
+
+    [Fact]
+    public void WriteIfDifferent_EmptyParameters_WritesEmptyCall()
+    {
+        // Arrange
+        var cache = new CycleCache("CYCLE800");
+        var parameters = new Dictionary<string, object>();
+
+        // Act
+        cache.WriteIfDifferent(_blockWriter, parameters);
+
+        // Assert
+        var output = _stringWriter.ToString();
+        Assert.Contains("CYCLE800()", output);
+    }
+
+    [Fact]
+    public void GetStats_AfterReset_ReturnsCorrectState()
+    {
+        // Arrange
+        var cache = new CycleCache("CYCLE800");
+        var parameters = new Dictionary<string, object>
+        {
+            { "MODE", 1 }
+        };
+
+        // Act
+        cache.WriteIfDifferent(_blockWriter, parameters);
+        cache.Reset();
+        var stats = cache.GetStats();
+
+        // Assert
+        Assert.Equal("CYCLE800", stats["cycle_name"]);
+        Assert.Equal(1, stats["call_count"]);
+        Assert.False((bool)stats["is_cached"]);
+        Assert.Equal(0, stats["cached_params_count"]);
+    }
+
+    [Fact]
+    public void CycleCacheHelper_GetOrCreate_CreatesNewCache()
+    {
+        // Arrange
+        var memoryStream = new MemoryStream();
+        var streamWriter = new StreamWriter(memoryStream);
+        var context = new PostContext(streamWriter);
+
+        // Act
+        var cache = CycleCacheHelper.GetOrCreate(context, "CYCLE83");
+
+        // Assert
+        Assert.NotNull(cache);
+        Assert.Equal("CYCLE83", cache.CycleName);
+    }
+
+    [Fact]
+    public void CycleCacheHelper_GetOrCreate_ReturnsExistingCache()
+    {
+        // Arrange
+        var memoryStream = new MemoryStream();
+        var streamWriter = new StreamWriter(memoryStream);
+        var context = new PostContext(streamWriter);
+        var cache1 = CycleCacheHelper.GetOrCreate(context, "CYCLE83");
+
+        // Act
+        var cache2 = CycleCacheHelper.GetOrCreate(context, "CYCLE83");
+
+        // Assert
+        Assert.Same(cache1, cache2);
+    }
+
+    [Fact]
+    public void CycleCacheHelper_WriteIfDifferent_WritesToContext()
+    {
+        // Arrange
+        var memoryStream = new MemoryStream();
+        var streamWriter = new StreamWriter(memoryStream);
+        var context = new PostContext(streamWriter);
+        var parameters = new Dictionary<string, object>
+        {
+            { "RTP", 10.0 }
+        };
+
+        // Act
+        var result = CycleCacheHelper.WriteIfDifferent(context, "CYCLE81", parameters);
+
+        // Assert
+        Assert.True(result);
+        streamWriter.Flush();
+        memoryStream.Position = 0;
+        using var reader = new StreamReader(memoryStream);
+        var output = reader.ReadToEnd();
+        Assert.Contains("CYCLE81", output);
+    }
+
+    [Fact]
+    public void CycleCacheHelper_Reset_ClearsCache()
+    {
+        // Arrange
+        var memoryStream = new MemoryStream();
+        var streamWriter = new StreamWriter(memoryStream);
+        var context = new PostContext(streamWriter);
+        var parameters = new Dictionary<string, object>
+        {
+            { "RTP", 10.0 }
+        };
+
+        // Act - First call
+        CycleCacheHelper.WriteIfDifferent(context, "CYCLE81", parameters);
+
+        // Reset
+        CycleCacheHelper.Reset(context, "CYCLE81");
+
+        // Clear output
+        memoryStream.SetLength(0);
+
+        // Second call with same parameters
+        var result = CycleCacheHelper.WriteIfDifferent(context, "CYCLE81", parameters);
+
+        // Assert
+        Assert.True(result); // Full definition written after reset
     }
 }
-
-
-
-

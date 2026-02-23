@@ -58,6 +58,87 @@ public class PythonPostContext
         _context.SetSystemVariable("BLOCK_NUMBER", num + increment);
         return num;
     }
+
+    // === StateCache методы (IMSPost-style LAST_* variables) ===
+
+    /// <summary>
+    /// Получить значение из кэша состояний
+    /// </summary>
+    public T cacheGet<T>(string key, T defaultValue = default!)
+    {
+        return _context.StateCache.Get(key, defaultValue);
+    }
+
+    /// <summary>
+    /// Установить значение в кэш состояний
+    /// </summary>
+    public void cacheSet<T>(string key, T value)
+    {
+        _context.StateCache.Update(key, value);
+    }
+
+    /// <summary>
+    /// Проверить, изменилось ли значение по сравнению с кэшем
+    /// </summary>
+    public bool cacheHasChanged<T>(string key, T value)
+    {
+        return _context.StateCache.HasChanged(key, value);
+    }
+
+    /// <summary>
+    /// Получить или установить значение в кэше состояний
+    /// </summary>
+    public T cacheGetOrSet<T>(string key, T defaultValue = default!)
+    {
+        return _context.StateCache.GetOrSet(key, defaultValue);
+    }
+
+    /// <summary>
+    /// Сбросить значение из кэша состояний
+    /// </summary>
+    public void cacheReset(string key)
+    {
+        _context.StateCache.Remove(key);
+    }
+
+    /// <summary>
+    /// Сбросить весь кэш состояний
+    /// </summary>
+    public void cacheResetAll()
+    {
+        _context.StateCache.Clear();
+    }
+
+    // === CycleCache методы ===
+
+    /// <summary>
+    /// Записать цикл, если параметры отличаются от закэшированных
+    /// </summary>
+    /// <param name="cycleName">Имя цикла (например, "CYCLE800")</param>
+    /// <param name="parameters">Параметры цикла</param>
+    /// <returns>true если записано полное определение</returns>
+    public bool cycleWriteIfDifferent(string cycleName, Dictionary<string, object> parameters)
+    {
+        return _context.WriteCycleIfDifferent(cycleName, parameters);
+    }
+
+    /// <summary>
+    /// Сбросить кэш цикла
+    /// </summary>
+    public void cycleReset(string cycleName)
+    {
+        _context.ResetCycleCache(cycleName);
+    }
+
+    /// <summary>
+    /// Получить или создать кэш цикла
+    /// </summary>
+    /// <param name="cycleName">Имя цикла</param>
+    /// <returns>CycleCache</returns>
+    public CycleCache cycleGetCache(string cycleName)
+    {
+        return CycleCacheHelper.GetOrCreate(_context, cycleName);
+    }
     
     // === Методы вывода ===
     /// <summary>
