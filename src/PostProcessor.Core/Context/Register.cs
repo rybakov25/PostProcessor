@@ -36,6 +36,84 @@ public class Register : NCWord
     }
 
     /// <summary>
+    /// Установить значение без отметки об изменении (для инициализации)
+    /// </summary>
+    public void SetInitial(double value)
+    {
+        Value = value;
+        _previousValue = value;
+        _hasChanged = false;
+    }
+
+    /// <summary>
+    /// Показать значение (принудительно отметить как изменённое)
+    /// </summary>
+    public void Show()
+    {
+        _hasChanged = true;
+    }
+
+    /// <summary>
+    /// Показать значение если оно отличается
+    /// </summary>
+    public void Show(double value)
+    {
+        if (Math.Abs(value - Value) > 1e-6)
+        {
+            _hasChanged = true;
+        }
+    }
+
+    /// <summary>
+    /// Скрыть значение (отметить как неизменённое)
+    /// </summary>
+    public void Hide()
+    {
+        _hasChanged = false;
+    }
+
+    /// <summary>
+    /// Скрыть значение если оно равно указанному
+    /// </summary>
+    public void Hide(double value)
+    {
+        if (Math.Abs(value - Value) < 1e-6)
+        {
+            _hasChanged = false;
+        }
+    }
+
+    /// <summary>
+    /// Сбросить к значению по умолчанию
+    /// </summary>
+    public void Reset(bool markChanged = true)
+    {
+        _previousValue = Value;
+        Value = 0.0;
+        _hasChanged = markChanged;
+    }
+
+    /// <summary>
+    /// Сбросить к указанному значению
+    /// </summary>
+    public void Reset(double value, bool markChanged = true)
+    {
+        _previousValue = Value;
+        Value = value;
+        _hasChanged = markChanged;
+    }
+
+    /// <summary>
+    /// Проверить, отличаются ли значения
+    /// </summary>
+    public bool ValuesDiffer => Math.Abs(Value - _previousValue) > 1e-6;
+
+    /// <summary>
+    /// Проверить, равно ли значение указанному
+    /// </summary>
+    public bool ValuesSame => Math.Abs(Value - _previousValue) < 1e-6;
+
+    /// <summary>
     /// Форматировать значение согласно формату
     /// </summary>
     public string FormatValue() => Value.ToString(Format, CultureInfo.InvariantCulture);

@@ -139,10 +139,10 @@ public class FormatSpec
     public static FormatSpec Parse(string formatString)
     {
         var spec = new FormatSpec();
-        
+
         if (string.IsNullOrEmpty(formatString))
             return spec;
-        
+
         // Извлечение адреса (первый символ или символы до {)
         var braceIndex = formatString.IndexOf('{');
         if (braceIndex > 0)
@@ -155,15 +155,40 @@ public class FormatSpec
             spec.Address = formatString[0].ToString();
             formatString = formatString.Substring(1);
         }
-        
+
         // Парсинг содержимого {}
         if (formatString.StartsWith("{") && formatString.EndsWith("}"))
         {
             var content = formatString.Substring(1, formatString.Length - 2);
             ParseContent(spec, content);
         }
-        
+
         return spec;
+    }
+
+    /// <summary>
+    /// Попытаться распарсить формат-строку
+    /// </summary>
+    /// <param name="formatString">Формат-строка</param>
+    /// <returns>FormatSpec или null если не удалось</returns>
+    public static FormatSpec? TryParse(string formatString)
+    {
+        try
+        {
+            return Parse(formatString);
+        }
+        catch
+        {
+            return null;
+        }
+    }
+
+    /// <summary>
+    /// Форматировать значение (алиас для FormatValue)
+    /// </summary>
+    public string Format(double value)
+    {
+        return FormatValue(value);
     }
     
     private static void ParseContent(FormatSpec spec, string content)
