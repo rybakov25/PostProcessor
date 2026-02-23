@@ -1,0 +1,139 @@
+{
+  "$schema": "../controller-schema.json",
+  "name": "Fanuc 32i",
+  "machineType": "Milling",
+  "version": "32i-B5",
+  "description": "Configuration for Fanuc 32i multi-axis controllers",
+
+  "output": {
+    "extension": ".nc",
+    "encoding": "UTF-8",
+    "lineEnding": "LF"
+  },
+
+  "formatting": {
+    "blockNumber": {
+      "enabled": true,
+      "prefix": "N",
+      "increment": 1,
+      "start": 1
+    },
+    "comments": {
+      "type": "parentheses",
+      "prefix": "(",
+      "suffix": ")",
+      "semicolonPrefix": ";",
+      "maxLength": 64,
+      "transliterate": false,
+      "allowSpecialCharacters": true
+    },
+    "coordinates": {
+      "decimals": 3,
+      "trailingZeros": false,
+      "decimalPoint": true,
+      "leadingZeros": true
+    },
+    "feedrate": {
+      "decimals": 1,
+      "prefix": "F"
+    },
+    "spindleSpeed": {
+      "decimals": 0,
+      "prefix": "S"
+    }
+  },
+
+  "registerFormats": {
+    "X": { "address": "X", "format": "F4.3", "isModal": true, "minValue": -1000, "maxValue": 1000 },
+    "Y": { "address": "Y", "format": "F4.3", "isModal": true, "minValue": -500, "maxValue": 500 },
+    "Z": { "address": "Z", "format": "F4.3", "isModal": true, "minValue": -400, "maxValue": 100 },
+    "A": { "address": "A", "format": "F3.2", "isModal": true, "minValue": -120, "maxValue": 120 },
+    "B": { "address": "B", "format": "F3.2", "isModal": true, "minValue": 0, "maxValue": 360 },
+    "C": { "address": "C", "format": "F3.2", "isModal": true, "minValue": 0, "maxValue": 360 },
+    "F": { "address": "F", "format": "F3.1", "isModal": false, "minValue": 1, "maxValue": 15000 },
+    "S": { "address": "S", "format": "F0", "isModal": false, "minValue": 10, "maxValue": 15000 },
+    "T": { "address": "T", "format": "F0", "isModal": false, "minValue": 1, "maxValue": 60 }
+  },
+
+  "functionCodes": {
+    "rapid": { "code": "G00", "group": "MOTION", "isModal": true, "description": "Rapid positioning" },
+    "linear": { "code": "G01", "group": "MOTION", "isModal": true, "description": "Linear interpolation" },
+    "cw_arc": { "code": "G02", "group": "MOTION", "isModal": true, "description": "Circular interpolation CW" },
+    "ccw_arc": { "code": "G03", "group": "MOTION", "isModal": true, "description": "Circular interpolation CCW" },
+    "spindle_cw": { "code": "M03", "group": "SPINDLE", "isModal": true, "description": "Spindle ON CW" },
+    "spindle_ccw": { "code": "M04", "group": "SPINDLE", "isModal": true, "description": "Spindle ON CCW" },
+    "spindle_stop": { "code": "M05", "group": "SPINDLE", "isModal": false, "description": "Spindle STOP" },
+    "spindle_orient": { "code": "M19", "group": "SPINDLE", "isModal": false, "description": "Spindle orient" },
+    "coolant_flood": { "code": "M08", "group": "COOLANT", "isModal": true, "description": "Coolant ON" },
+    "coolant_mist": { "code": "M07", "group": "COOLANT", "isModal": true, "description": "Mist coolant ON" },
+    "coolant_off": { "code": "M09", "group": "COOLANT", "isModal": false, "description": "Coolant OFF" },
+    "tool_length_comp": { "code": "G43", "group": "TOOL_COMP", "isModal": true, "associatedRegisters": ["H"], "description": "Tool length compensation" },
+    "tool_radius_left": { "code": "G41", "group": "TOOL_COMP", "isModal": true, "associatedRegisters": ["D"], "description": "Tool radius compensation LEFT" },
+    "tool_radius_right": { "code": "G42", "group": "TOOL_COMP", "isModal": true, "associatedRegisters": ["D"], "description": "Tool radius compensation RIGHT" },
+    "tool_radius_off": { "code": "G40", "group": "TOOL_COMP", "isModal": false, "description": "Tool radius compensation OFF" },
+    "tool_change": { "code": "M06", "group": "TOOL_CHANGE", "isModal": false, "description": "Tool change" },
+    "program_end": { "code": "M30", "group": "PROGRAM", "isModal": false, "description": "Program end with rewind" },
+    "tcp_on": { "code": "G43.4", "group": "TCP", "isModal": true, "description": "TCP on (5-axis)" },
+    "tcp_off": { "code": "G49", "group": "TCP", "isModal": false, "description": "TCP off" }
+  },
+
+  "workCoordinateSystems": [
+    { "number": 1, "code": "G54", "xOffset": 0.0, "yOffset": 0.0, "zOffset": 0.0 },
+    { "number": 2, "code": "G55", "xOffset": 0.0, "yOffset": 0.0, "zOffset": 0.0 },
+    { "number": 3, "code": "G56", "xOffset": 0.0, "yOffset": 0.0, "zOffset": 0.0 },
+    { "number": 4, "code": "G57", "xOffset": 0.0, "yOffset": 0.0, "zOffset": 0.0 },
+    { "number": 5, "code": "G58", "xOffset": 0.0, "yOffset": 0.0, "zOffset": 0.0 },
+    { "number": 6, "code": "G59", "xOffset": 0.0, "yOffset": 0.0, "zOffset": 0.0 }
+  ],
+
+  "drillingCycles": {
+    "drill": "G81",
+    "peckDrill": "G83",
+    "tapping": "G84",
+    "boring": "G85",
+    "fineBoring": "G76"
+  },
+
+  "safety": {
+    "clearancePlane": 100.0,
+    "retractPlane": 5.0,
+    "maxFeedRate": 15000.0,
+    "maxSpindleSpeed": 15000.0,
+    "minThreadFeed": 0.1,
+    "autoToolChangeRetract": true,
+    "enableTravelLimitsCheck": true
+  },
+
+  "multiAxis": {
+    "enableRtcp": true,
+    "maxA": 120.0,
+    "minA": -120.0,
+    "maxB": 360.0,
+    "minB": 0.0,
+    "maxC": 360.0,
+    "minC": 0.0,
+    "strategy": "cartesian"
+  },
+
+  "templates": {
+    "enabled": true,
+    "header": [
+      "(POSTPROCESSED BY POSTPROCESSOR v1.0)",
+      "(MACHINE: FANUC 32i)",
+      "(DATE: {dateTime})"
+    ],
+    "footer": [
+      "M30"
+    ],
+    "includeTimestamp": true,
+    "includeToolList": true
+  },
+
+  "customParameters": {
+    "useHighSpeedMachining": true,
+    "highSpeedCode": "G05.1Q1",
+    "enableLookAhead": true,
+    "defaultWorkOffset": "G54",
+    "toolChangePosition": "G91 G28 Z0"
+  }
+}
