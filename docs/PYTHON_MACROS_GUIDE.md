@@ -8,8 +8,12 @@
 2. [Быстрый старт (5 минут)](#быстрый-старт-5-минут)
 3. [Основы Python для макросов](#основы-python-для-макросов)
 4. [API макросов](#api-макросов)
-5. [Примеры макросов](#примеры-макросов)
-6. [Продвинутые темы](#продвинутые-темы)
+5. [Продвинутые возможности](#продвинутые-возможности)
+   - [StateCache — кэш состояний](#statecache--кэш-состояний)
+   - [CycleCache — кэширование циклов](#cyclecache--кэширование-циклов)
+   - [NumericNCWord — форматирование](#numericncword--форматирование)
+   - [TextNCWord — комментарии](#textncword--комментарии)
+6. [Примеры макросов](#примеры-макросов)
 7. [Отладка](#отладка)
 8. [Справочник](#справочник)
 9. [Частые ошибки](#частые-ошибки)
@@ -183,7 +187,7 @@ while count < 10:
 def execute(context, command):
     """
     Документация макроса
-    
+
     Args:
         context: Объект контекста постпроцессора
         command: Объект APT-команды
@@ -445,9 +449,228 @@ if command.minorWords:
 
 ---
 
+## Продвинутые возможности
+
+### StateCache — кэш состояний (IMSPost-style)
+
+StateCache предоставляет кэширование переменных для модального вывода.
+
+#### Методы StateCache
+
+| Метод | Описание | Пример |
+|-------|----------|--------|
+| `cacheGet(key, default)` | Получить значение из кэша | `feed = context.cacheGet("LAST_FEED", 0.0)` |
+| `cacheSet(key, value)` | Установить значение в кэш | `context.cacheSet("LAST_FEED", 500.0)` |
+| `cacheHasChanged(key, value)` | Проверить изменение | `if context.cacheHasChanged("LAST_FEED", feed):` |
+| `cacheGetOrSet(key, default)` | Получить или установить | `tool = context.cacheGetOrSet("LAST_TOOL", 0)` |
+| `cacheReset(key)` | Сбросить значение | `context.cacheReset("LAST_FEED")` |
+| `cacheResetAll()` | Сбросить весь кэш | `context.cacheResetAll()` |
+
+#### Пример использования
+
+```python
+# -*- coding: ascii -*-
+def execute(context, command):
+    # Получение подачи
+    feed = command.getNumeric(0, 0)
+    
+    # Проверка изменения через кэш
+    if context.cacheHasChanged("LAST_FEED", feed):
+        context.registers.f = feed
+        context.writeBlock()
+        context.cacheSet("LAST_FEED", feed)
+```
+
+#### Преимущества StateCache
+
+- **Автоматическая модальность** — не нужно вручную управлять флагами
+- **Типобезопасность** — кэш автоматически определяет тип значения
+- **Изоляция** — каждый ключ независим
+- **Производительность** — быстрый доступ к закэшированным значениям
+
+---
+
+### CycleCache — кэширование циклов
+
+Автоматический выбор: полное определение цикла или только вызов.
+
+#### Методы CycleCache
+
+| Метод | Описание | Пример |
+|-------|----------|--------|
+| `cycleWriteIfDifferent(name, params)` | Записать если отличается | `context.cycleWriteIfDifferent("CYCLE800", params)` |
+| `cycleReset(name)` | Сбросить кэш цикла | `context.cycleReset("CYCLE800")` |
+| `cycleGetCache(name)` | Получить кэш цикла | `cache = context.cycleGetCache("CYCLE800")` |
+
+#### Пример использования
+
+```python
+# -*- coding: ascii -*-
+from cycle_cache import CycleCache
+
+def execute(context, command):
+    # Параметры цикла CYCLE800
+    params = {
+        'MODE': 1,
+        'TABLE': 'TABLE1',
+        'X': 100.0,
+        'Y': 200.0,
+        'Z': 50.0,
+        'A': 0.0,
+        'B': 45.0,
+        'C': 0.0
+    }
+    
+    # Умный вывод (полное определение или вызов)
+    context.cycleWriteIfDifferent("CYCLE800", params)
+```
+
+#### Результат
+
+```nc
+; Первый вызов (полное определение)
+CYCLE800(MODE=1, TABLE="TABLE1", X=100.000, Y=200.000, Z=50.000, A=0.000, B=45.000, C=0.000)
+
+; Второй вызов (те же параметры - только вызов)
+CYCLE800()
+
+; Третий вызов (новые параметры - полное определение)
+CYCLE800(MODE=1, TABLE="TABLE1", X=150.000, Y=250.000, Z=60.000, A=0.000, B=90.000, C=0.000)
+```
+
+#### Преимущества CycleCache
+
+- **Автоматическое сравнение** — не нужно вручную сравнивать параметры
+- **Оптимизация вывода** — только вызов при одинаковых параметрах
+- **Поддержка всех циклов** — универсальный механизм
+- **Читаемый G-код** — меньше дублирования
+
+---
+
+### NumericNCWord — форматирование из конфига
+
+NumericNCWord предоставляет форматирование числовых значений из JSON-конфига контроллера.
+
+#### Методы NumericNCWord
+
+| Метод | Описание | Пример |
+|-------|----------|--------|
+| `getNumericWord(address)` | Получить NC-слово | `xWord = context.getNumericWord('X')` |
+| `setNumericValue(address, value)` | Установить значение | `context.setNumericValue('X', 100.5)` |
+| `getFormattedValue(address)` | Получить отформатированное | `xStr = context.getFormattedValue('X')` |
+
+#### Пример использования
+
+```python
+# -*- coding: ascii -*-
+def execute(context, command):
+    # Установка значения с форматированием из конфига
+    context.setNumericValue('X', 100.5)
+    
+    # Получение отформатированной строки
+    xStr = context.getFormattedValue('X')  # "X100.500" (из конфига)
+    
+    # Запись блока
+    context.writeBlock()
+```
+
+#### Конфигурация форматирования
+
+Пример из `configs/controllers/siemens/840d.json`:
+
+```json
+{
+  "formatting": {
+    "coordinates": {
+      "decimals": 3,
+      "leadingZeros": true,
+      "trailingZeros": false,
+      "decimalPoint": true
+    },
+    "feedrate": {
+      "decimals": 1,
+      "prefix": "F"
+    },
+    "spindleSpeed": {
+      "decimals": 0,
+      "prefix": "S"
+    }
+  }
+}
+```
+
+#### Преимущества NumericNCWord
+
+- **Единый источник истины** — форматирование в конфиге
+- **Гибкость** — легко изменить формат для всех макросов
+- **Стандартизация** — одинаковый формат во всей программе
+- **Локализация** — разные форматы для разных контроллеров
+
+---
+
+### TextNCWord — комментарии со стилем
+
+TextNCWord предоставляет комментарии со стилем из конфига контроллера.
+
+#### Стили комментариев
+
+| Стиль | Конфиг | Результат |
+|-------|--------|-----------|
+| `parentheses` | `"type": "parentheses"` | `(Comment text)` |
+| `semicolon` | `"type": "semicolon"` | `; Comment text` |
+| `both` | `"type": "both"` | `(Comment text) ; Comment text` |
+
+#### Метод comment()
+
+```python
+# -*- coding: ascii -*-
+def execute(context, command):
+    # Комментарий автоматически использует стиль из конфига
+    context.comment("Начало операции")
+    
+    # Для Siemens: (Начало операции)
+    # Для Fanuc: (Начало операции)
+    # Для Haas: ; Начало операции
+```
+
+#### Конфигурация стиля
+
+Пример из `configs/controllers/haas/ngc.json`:
+
+```json
+{
+  "formatting": {
+    "comments": {
+      "type": "semicolon",
+      "semicolonPrefix": ";",
+      "maxLength": 128,
+      "transliterate": false,
+      "allowSpecialCharacters": true
+    }
+  }
+}
+```
+
+#### Транслитерация
+
+Если в конфиге указано `"transliterate": true`:
+
+```python
+context.comment("Привет")  # → (Privet)
+```
+
+#### Преимущества TextNCWord
+
+- **Автоматический стиль** — из конфигурации контроллера
+- **Транслитерация** — поддержка кириллицы
+- **Ограничение длины** — защита от переполнения
+- **Спецсимволы** — настройка разрешённых символов
+
+---
+
 ## Примеры макросов
 
-### Пример 1: GOTO — линейное перемещение
+### Пример 1: GOTO — линейное перемещение (с StateCache)
 
 **APT:** `GOTO/100, 50, 10`
 
@@ -460,30 +683,30 @@ if command.minorWords:
 def execute(context, command):
     """
     Process GOTO linear motion command
-    
+
     APT format: GOTO/X, Y, Z [, I, J, K]
     - X, Y, Z — координаты
     - I, J, K — вектор направления (для 5-оси)
     """
-    
+
     # Проверка наличия координат
     if not command.numeric or len(command.numeric) == 0:
         return
-    
+
     # Получение координат
     x = command.numeric[0] if len(command.numeric) > 0 else context.registers.x
     y = command.numeric[1] if len(command.numeric) > 1 else context.registers.y
     z = command.numeric[2] if len(command.numeric) > 2 else context.registers.z
-    
+
     # Обновление регистров
     context.registers.x = x
     context.registers.y = y
     context.registers.z = z
-    
+
     # Определение типа движения
     motion_type = context.system.MOTION
     is_rapid = (motion_type == "RAPID" or context.currentMotionType == "RAPID")
-    
+
     # Формирование строки G-кода
     if is_rapid:
         gcode = "G0"
@@ -492,22 +715,25 @@ def execute(context, command):
         context.currentMotionType = "LINEAR"
     else:
         gcode = "G1"
+
+    # Вывод движения с использованием NumericNCWord
+    context.setNumericValue('X', x)
+    context.setNumericValue('Y', y)
+    context.setNumericValue('Z', z)
     
-    # Вывод движения
-    line = f"{gcode} X{format_num(x)}"
+    line = f"{gcode} {context.getFormattedValue('X')}"
     if len(command.numeric) > 1:
-        line += f" Y{format_num(y)}"
+        line += f" {context.getFormattedValue('Y')}"
     if len(command.numeric) > 2:
-        line += f" Z{format_num(z)}"
-    
+        line += f" {context.getFormattedValue('Z')}"
+
     context.write(line)
-    
-    # Вывод подачи (только если изменилась — модально)
+
+    # Вывод подачи с использованием StateCache (только если изменилась — модально)
     if context.registers.f > 0:
-        last_feed = context.globalVars.GetDouble("LAST_FEED", 0.0)
-        if last_feed != context.registers.f:
+        if context.cacheHasChanged("LAST_FEED", context.registers.f):
             context.write(f"F{context.registers.f:.1f}")
-            context.globalVars.SetDouble("LAST_FEED", context.registers.f)
+            context.cacheSet("LAST_FEED", context.registers.f)
 
 
 def format_num(value):
@@ -540,30 +766,35 @@ N12 F500.0
 def execute(context, command):
     """
     Process RAPID positioning command
-    
+
     Устанавливает SYSTEM.MOTION = RAPID для следующего перемещения
     """
-    
+
     # Установка типа движения RAPID
     context.system.MOTION = "RAPID"
     context.currentMotionType = "RAPID"
-    
+
     # Если есть координаты — выводим G0 сразу
     if command.numeric and len(command.numeric) > 0:
         x = command.numeric[0] if len(command.numeric) > 0 else context.registers.x
         y = command.numeric[1] if len(command.numeric) > 1 else context.registers.y
         z = command.numeric[2] if len(command.numeric) > 2 else context.registers.z
-        
+
         context.registers.x = x
         context.registers.y = y
         context.registers.z = z
+
+        # Использование NumericNCWord для форматирования
+        context.setNumericValue('X', x)
+        context.setNumericValue('Y', y)
+        context.setNumericValue('Z', z)
         
-        line = f"G0 X{format_num(x)}"
+        line = f"G0 {context.getFormattedValue('X')}"
         if len(command.numeric) > 1:
-            line += f" Y{format_num(y)}"
+            line += f" {context.getFormattedValue('Y')}"
         if len(command.numeric) > 2:
-            line += f" Z{format_num(z)}"
-        
+            line += f" {context.getFormattedValue('Z')}"
+
         context.write(line)
 
 
@@ -595,55 +826,55 @@ N10 G0 X200. Y100. Z50.
 def execute(context, command):
     """
     Process SPINDL spindle control command
-    
+
     APT Examples:
       SPINDL/ON, CLW, 1600    — включить по часовой, 1600 об/мин
       SPINDL/OFF              — выключить
       SPINDL/1200             — установить 1200 об/мин
     """
-    
+
     # Установка оборотов из числовых параметров
     if command.numeric and len(command.numeric) > 0:
         context.globalVars.SPINDLE_RPM = command.numeric[0]
-    
+
     context.registers.s = context.globalVars.SPINDLE_RPM
-    
+
     # Определение состояния шпинделя
     spindle_state = context.globalVars.SPINDLE_DEF
-    
+
     # Обработка ключевых слов
     if command.minorWords:
         for word in command.minorWords:
             word_upper = word.upper()
-            
+
             if word_upper in ["ON", "CLW", "CLOCKWISE"]:
                 spindle_state = "CLW"
                 context.globalVars.SPINDLE_DEF = "CLW"
-                
+
             elif word_upper in ["CCLW", "CCW", "COUNTER-CLOCKWISE"]:
                 spindle_state = "CCLW"
                 context.globalVars.SPINDLE_DEF = "CCLW"
-                
+
             elif word_upper == "ORIENT":
                 spindle_state = "ORIENT"
-                
+
             elif word_upper == "OFF":
                 spindle_state = "OFF"
-    
+
     # Вывод команд в зависимости от состояния
     if spindle_state == "CLW":
         context.write("M3")
         if context.globalVars.SPINDLE_RPM > 0:
             context.write(f"S{int(context.globalVars.SPINDLE_RPM)}")
-            
+
     elif spindle_state == "CCLW":
         context.write("M4")
         if context.globalVars.SPINDLE_RPM > 0:
             context.write(f"S{int(context.globalVars.SPINDLE_RPM)}")
-            
+
     elif spindle_state == "ORIENT":
         context.write("M19")
-        
+
     else:  # OFF
         context.write("M5")
 ```
@@ -656,7 +887,7 @@ N12 S1600
 
 ---
 
-### Пример 4: FEDRAT — управление подачей
+### Пример 4: FEDRAT — управление подачей (с NumericNCWord)
 
 **APT:** `FEDRAT/500`
 
@@ -669,27 +900,29 @@ N12 S1600
 def execute(context, command):
     """
     Process FEDRAT feed rate command
-    
+
     Подача МОДАЛЬНА — выводится только при изменении
     """
-    
+
     # Проверка наличия параметров
     if not command.numeric or len(command.numeric) == 0:
         return
-    
+
     feed = command.numeric[0]
-    
+
     # Обновление регистра
     context.registers.f = feed
-    
-    # Проверка на изменение (модальность)
-    last_feed = context.globalVars.GetDouble("LAST_FEED", 0.0)
-    if last_feed == feed:
+
+    # Проверка на изменение с использованием StateCache (модальность)
+    if not context.cacheHasChanged("LAST_FEED", feed):
         return  # Та же подача — не выводим
-    
+
     # Подача изменилась — выводим и запоминаем
-    context.globalVars.SetDouble("LAST_FEED", feed)
-    context.write(f"F{round(feed, 1)}")
+    context.cacheSet("LAST_FEED", feed)
+    
+    # Использование NumericNCWord для форматирования
+    context.setNumericValue('F', feed)
+    context.write(context.getFormattedValue('F'))
 ```
 
 **Вывод:**
@@ -712,33 +945,33 @@ N10 F500.0
 def execute(context, command):
     """
     Process COOLNT coolant control command
-    
+
     APT Examples:
       COOLNT/ON       — включить охлаждение
       COOLNT/FLOOD    — включить жидкостное
       COOLNT/MIST     — включить туман
       COOLNT/OFF      — выключить
     """
-    
+
     coolant_state = context.globalVars.COOLANT_DEF
-    
+
     # Обработка ключевых слов
     if command.minorWords:
         for word in command.minorWords:
             word_upper = word.upper()
-            
+
             if word_upper in ["ON", "FLOOD"]:
                 coolant_state = "FLOOD"
                 context.globalVars.COOLANT_DEF = "FLOOD"
-                
+
             elif word_upper == "MIST":
                 coolant_state = "MIST"
                 context.globalVars.COOLANT_DEF = "MIST"
-                
+
             elif word_upper == "OFF":
                 coolant_state = "OFF"
                 context.globalVars.COOLANT_DEF = "OFF"
-    
+
     # Вывод команд
     if coolant_state == "FLOOD":
         context.write("M8")
@@ -770,55 +1003,55 @@ _block_number = 70  # Начальный номер блока
 def execute(context, command):
     """
     Process LOADTL for MMILL
-    
+
     Добавляет специфичные команды:
     - RTCPON после смены
     - M101H0 (зажим головы)
     - G0 B0 (поворот оси B)
     """
-    
+
     global _block_number
-    
+
     # Проверка на одинаковый инструмент
     if context.globalVars.TOOLCHG_IGNORE_SAME:
         new_tool = int(command.numeric[0]) if command.numeric else 0
         if context.globalVars.TOOL == new_tool:
             return  # Тот же инструмент — пропускаем
-    
+
     # Получение номера инструмента
     if command.numeric:
         context.globalVars.TOOL = int(command.numeric[0])
-    
+
     context.globalVars.HVAL = 1
-    
+
     # Получение скорости шпинделя
     spindle_speed = command.numeric[1] if len(command.numeric) > 1 else 1600
     context.registers.s = spindle_speed
-    
+
     # Вывод команд смены инструмента
     context.write(f"N{_block_number} T{context.globalVars.TOOL}")
     _block_number += 10
-    
+
     context.write(f"N{_block_number} D1")
     _block_number += 10
-    
+
     context.write(f"N{_block_number} M6")
     _block_number += 10
-    
+
     # Специфичные команды MMILL
     context.write(f"N{_block_number} G0 B0")
     _block_number += 10
-    
+
     context.write(f"N{_block_number} M101H0")
     _block_number += 10
-    
+
     context.write(f"N{_block_number} RTCPON")
     _block_number += 10
-    
+
     # Включение шпинделя
     context.write(f"N{_block_number} S{int(spindle_speed)} M3")
     _block_number += 10
-    
+
     # Установка флагов
     context.globalVars.TOOLCHNG = 1
     context.globalVars.FTOOL = context.globalVars.TOOL
@@ -849,20 +1082,20 @@ N130 S1600 M3
 def execute(context, command):
     """
     Инициализация программы для MMILL
-    
+
     Выводит:
     - Заголовок программы
     - Начальные G-коды
     - CYCLE800 для 5-оси
     """
-    
+
     # Инициализация нумерации блоков
     context.globalVars.SetInt("BLOCK_NUMBER", 1)
     context.globalVars.SetInt("BLOCK_INCREMENT", 2)
-    
-    # Инициализация модальности подачи
-    context.globalVars.SetDouble("LAST_FEED", 0.0)
-    
+
+    # Инициализация модальности подачи с использованием StateCache
+    context.cacheResetAll()
+
     # Заголовок программы
     header = context.config.header
     if header and header.enabled:
@@ -873,23 +1106,25 @@ def execute(context, command):
                 inputFile=context.config.getParameterString("inputFile", "unknown"),
                 dateTime=context.config.getParameterString("dateTime", "unknown")
             ), suppress_block=True)
-    
+
     # Начальные блоки
     context.write("G54 G40 G90 G94 CUT2DF G17")
     context.write("TRANS")
     context.write("RTCPOF")
-    
-    # CYCLE800 для 5-оси
-    cycle = context.machine.config.fiveAxis.cycle800
-    params = cycle.parameters
-    context.write('CYCLE800({},"{}",{},{},{},{},{},{},{},{},{},{},{},{},{},{})'.format(
-        params['mode'], params['table'], params['rotation'], params['plane'],
-        params.get('x', 0), params.get('y', 0), params.get('z', 0),
-        params.get('a', 0), params.get('b', 0), params.get('c', 0),
-        params.get('dx', 0), params.get('dy', 0), params.get('dz', 0),
-        params['direction'], params['feed'], params['maxFeed']
-    ))
-    
+
+    # CYCLE800 для 5-оси с использованием CycleCache
+    cycle_params = {
+        'MODE': 1,
+        'TABLE': 'TABLE1',
+        'X': 0,
+        'Y': 0,
+        'Z': 0,
+        'A': 0,
+        'B': 0,
+        'C': 0
+    }
+    context.cycleWriteIfDifferent("CYCLE800", cycle_params)
+
     context.write("G64 SOFT FFWON")
     context.write(context.machine.config.head.clampCommand + "; TCB6 HEAD")
 ```
@@ -920,28 +1155,32 @@ N6 M101; TCB6 HEAD
 def execute(context, command):
     """
     Завершение программы для MMILL
-    
+
     Выводит:
     - Отвод по Z
     - Выключение шпинделя и охлаждения
     - Выключение RTCP
     - Конец программы M30
     """
-    
-    # Отвод по Z
-    context.write("G0 Z100.")
-    
+
+    # Отвод по Z с использованием NumericNCWord
+    context.setNumericValue('Z', 100.0)
+    context.write(f"G0 {context.getFormattedValue('Z')}")
+
     # Выключение шпинделя
     context.write("M5")
-    
+
     # Выключение охлаждения
     context.write("M9")
-    
+
     # Выключение RTCP
     context.write("RTCPOF")
-    
+
     # Конец программы
     context.write("M30")
+    
+    # Сброс кэшей
+    context.cacheResetAll()
 ```
 
 **Вывод:**
@@ -955,148 +1194,114 @@ N108 M30
 
 ---
 
-## Продвинутые темы
+### Пример 9: CYCLE800 — поворотный цикл (с CycleCache)
 
-### Модальные команды
+**APT:** `CYCLE800/1, TABLE1, 100, 200, 50, 0, 45, 0`
 
-**Модальность** означает, что команда действует до отмены или изменения.
+**Макрос (`siemens/cycle800.py`):**
 
 ```python
-# Пример модальной подачи
+# -*- coding: ascii -*-
+# CYCLE800 MACRO - Rotational Cycle (Siemens 840D)
+
 def execute(context, command):
-    feed = command.numeric[0]
+    """
+    Process CYCLE800 rotational cycle command
+
+    APT format: CYCLE800/MODE, TABLE, X, Y, Z, A, B, C
+
+    Parameters:
+      MODE  - Mode (1=absolute, 2=incremental)
+      TABLE - Table name
+      X, Y, Z - Coordinates
+      A, B, C - Rotation angles
+    """
+    if not command.numeric or len(command.numeric) == 0:
+        return
+
+    # Получение параметров цикла
+    mode = int(command.numeric[0]) if len(command.numeric) > 0 else 1
+    table = command.getString(0, "TABLE1")
+    x = command.numeric[1] if len(command.numeric) > 1 else 0.0
+    y = command.numeric[2] if len(command.numeric) > 2 else 0.0
+    z = command.numeric[3] if len(command.numeric) > 3 else 0.0
+    a = command.numeric[4] if len(command.numeric) > 4 else 0.0
+    b = command.numeric[5] if len(command.numeric) > 5 else 0.0
+    c = command.numeric[6] if len(command.numeric) > 6 else 0.0
+
+    # Формирование параметров для CycleCache
+    params = {
+        'MODE': mode,
+        'TABLE': table,
+        'X': x,
+        'Y': y,
+        'Z': z,
+        'A': a,
+        'B': b,
+        'C': c
+    }
     
-    # Проверяем, изменилась ли подача
-    last_feed = context.globalVars.GetDouble("LAST_FEED", 0.0)
-    
-    if last_feed == feed:
-        return  # Не выводим — уже активна
-    
-    # Выводим только при изменении
-    context.globalVars.SetDouble("LAST_FEED", feed)
-    context.write(f"F{feed:.1f}")
+    # Умный вывод с использованием CycleCache
+    context.cycleWriteIfDifferent("CYCLE800", params)
 ```
 
-**Модальные G-коды:**
-- G0/G1 — тип движения
-- G17/G18/G19 — плоскость дуги
-- G90/G91 — абсолютные/относительные координаты
-- G54-G59 — рабочие системы координат
+**Вывод:**
+```nc
+; Первый вызов (полное определение)
+CYCLE800(MODE=1, TABLE="TABLE1", X=100.000, Y=200.000, Z=50.000, A=0.000, B=45.000, C=0.000)
+
+; Второй вызов (те же параметры - только вызов)
+CYCLE800()
+
+; Третий вызов (новые параметры - полное определение)
+CYCLE800(MODE=1, TABLE="TABLE1", X=150.000, Y=250.000, Z=60.000, A=0.000, B=90.000, C=0.000)
+```
 
 ---
 
-### 5-осевая обработка (IJK → ABC)
+### Пример 10: COMMENT — комментарий (с TextNCWord)
 
-Для 5-осевых станков вектор направления (I,J,K) конвертируется в углы поворота (A,B,C).
+**APT:** `REMARK/Начало обработки`
+
+**Макрос (`base/comment.py`):**
 
 ```python
-import math
+# -*- coding: ascii -*-
+# COMMENT MACRO - Comment Output
 
-def ijk_to_abc(i, j, k):
-    """
-    Конвертация IJK вектора в ABC углы
-    
-    Для Siemens 840D:
-    - A = вращение вокруг X
-    - B = вращение вокруг Y
-    """
-    # A угол (вокруг X)
-    a = math.degrees(math.atan2(j, k))
-    
-    # B угол (вокруг Y)
-    b = math.degrees(math.atan2(i, math.sqrt(j*j + k*k)))
-    
-    # Нормализация к 0-360
-    if a < 0:
-        a += 360
-    if b < 0:
-        b += 360
-    
-    return round(a, 3), round(b, 3), 0.0
-
-
-# Использование в макросе GOTO
 def execute(context, command):
-    # Получение IJK
-    i = command.numeric[3] if len(command.numeric) > 3 else None
-    j = command.numeric[4] if len(command.numeric) > 4 else None
-    k = command.numeric[5] if len(command.numeric) > 5 else None
-    
-    if i is not None and j is not None and k is not None:
-        # Конвертация в ABC
-        a, b, c = ijk_to_abc(i, j, k)
-        
-        context.registers.a = a
-        context.registers.b = b
-        
-        # Вывод с поворотными осями
-        context.write(f"G1 X{x:.3f} Y{y:.3f} Z{z:.3f} A{a:.3f} B{b:.3f}")
+    """
+    Process COMMENT/REMARK command
+
+    APT Examples:
+      REMARK/Начало обработки    — вывод комментария
+      COMMENT/Test comment       — вывод комментария
+    """
+    # Получение текста комментария
+    if command.strings and len(command.strings) > 0:
+        comment_text = command.strings[0]
+    elif command.minorWords:
+        comment_text = " ".join(command.minorWords)
+    else:
+        return
+
+    # Вывод комментария с использованием TextNCWord
+    # Стиль автоматически берётся из конфига контроллера
+    context.comment(comment_text)
+```
+
+**Вывод:**
+```nc
+; Для Siemens/Fanuc:
+(Начало обработки)
+
+; Для Haas:
+; Начало обработки
 ```
 
 ---
 
-### Работа с конфигурацией
-
-**Чтение пользовательских параметров:**
-
-```python
-# Из JSON конфигурации станка
-use_soft_start = context.config.getParameterBool("softStart", False)
-feed_override = context.config.getParameterDouble("feedOverride", 100.0)
-custom_code = context.config.getParameterString("footerCode", "M30")
-
-# Использование в макросе
-if use_soft_start:
-    context.write("G04 P1.0")  # Пауза 1 секунда
-```
-
-**Пример конфигурации (`configs/machines/my_machine.json`):**
-
-```json
-{
-  "name": "My Custom Machine",
-  "machineProfile": "custom_01",
-  "customParameters": {
-    "softStart": true,
-    "feedOverride": 120.0,
-    "useCustomFeature": true,
-    "footerCode": "M30"
-  },
-  "customGCodes": {
-    "rapidOverride": "G00.1"
-  },
-  "customMCodes": {
-    "toolClamp": "M10",
-    "toolUnclamp": "M11"
-  }
-}
-```
-
----
-
-### Глобальные переменные
-
-**Создание и использование:**
-
-```python
-# Установка значения
-context.globalVars.SetDouble("CUSTOM_FEED", 500.0)
-context.globalVars.SetInt("CUSTOM_COUNTER", 10)
-context.globalVars.SetBool("CUSTOM_FLAG", True)
-context.globalVars["CUSTOM_STRING"] = "value"
-
-# Чтение значения
-feed = context.globalVars.GetDouble("CUSTOM_FEED", 0.0)
-counter = context.globalVars.GetInt("CUSTOM_COUNTER", 0)
-flag = context.globalVars.GetBool("CUSTOM_FLAG", False)
-value = context.globalVars["CUSTOM_STRING"]
-```
-
----
-
----
-
-### Пример 9: DELAY — пауза/выдержка времени
+### Пример 11: DELAY — пауза/выдержка времени
 
 **APT:** `DELAY/2.5` или `DELAY/REV,10`
 
@@ -1145,7 +1350,7 @@ N12 G04 P0.600    ; 10 rev at 1000 RPM = 0.6 sec
 
 ---
 
-### Пример 10: SEQNO — управление нумерацией блоков
+### Пример 12: SEQNO — управление нумерацией блоков
 
 **APT:** `SEQNO/ON`, `SEQNO/START,100`, `SEQNO/INCR,5`
 
@@ -1199,7 +1404,7 @@ SEQNO/START,100 → N100, N102, N104...
 
 ---
 
-### Пример 11: CUTCOM — радиусная компенсация инструмента
+### Пример 13: CUTCOM — радиусная компенсация инструмента
 
 **APT:** `TLCOMP/ON,LEFT` или `TLCOMP/OFF`
 
@@ -1273,7 +1478,7 @@ N12 G40           ; Cancel compensation
 
 ---
 
-### Пример 12: FROM — начальная позиция
+### Пример 14: FROM — начальная позиция
 
 **APT:** `FROM/100,200,50`
 
@@ -1334,7 +1539,7 @@ N10 G0 X100.000 Y200.000 Z50.000
 
 ---
 
-### Пример 13: GOHOME — возврат в домашнюю позицию
+### Пример 15: GOHOME — возврат в домашнюю позицию
 
 **APT:** `GOHOME/X,Y,Z` или `GOHOME/Z`
 
@@ -1397,7 +1602,7 @@ N12 G53 Z0.000                   ; Z home only
 
 ---
 
-### Пример 14: WPLANE — выбор рабочей плоскости
+### Пример 16: WPLANE — выбор рабочей плоскости
 
 **APT:** `WPLANE/XYPLAN` или `WPLANE/ON`
 
@@ -1457,7 +1662,7 @@ N12 G18    ; YZ plane
 
 ---
 
-### Пример 15: CYCLE81 — сверлильный цикл
+### Пример 17: CYCLE81 — сверлильный цикл (с CycleCache)
 
 **APT:** `CYCLE81/10,0,2,-25,0`
 
@@ -1489,30 +1694,17 @@ def execute(context, command):
     dp = command.numeric[3] if len(command.numeric) > 3 else 0.0
     dpr = command.numeric[4] if len(command.numeric) > 4 else 0.0
 
-    # Modal caching
-    use_cache = context.globalVars.Get("CYCLE_CACHE_ENABLED", 1)
-
-    cached_rtp = context.globalVars.GetDouble("CYCLE81_RTP", -999.0)
-    cached_dp = context.globalVars.GetDouble("CYCLE81_DP", -999.0)
-
-    params_changed = (
-        abs(rtp - cached_rtp) > 0.001 or
-        abs(dp - cached_dp) > 0.001
-    )
-
-    if use_cache and not params_changed and cached_rtp != -999.0:
-        cycle_active = context.globalVars.Get("CYCLE81_ACTIVE", 0)
-        if cycle_active:
-            return  # Already active
-
-    # Build cycle call
-    cycle_str = f"CYCLE81({rtp:.1f},{rfp:.1f},{sdis:.1f},{dp:.1f},{dpr:.1f})"
-    context.write(cycle_str)
-
-    # Cache parameters
-    context.globalVars.SetDouble("CYCLE81_RTP", rtp)
-    context.globalVars.SetDouble("CYCLE81_DP", dp)
-    context.globalVars.Set("CYCLE81_ACTIVE", 1)
+    # Формирование параметров для CycleCache
+    params = {
+        'RTP': rtp,
+        'RFP': rfp,
+        'SDIS': sdis,
+        'DP': dp,
+        'DPR': dpr
+    }
+    
+    # Умный вывод с использованием CycleCache
+    context.cycleWriteIfDifferent("CYCLE81", params)
 ```
 
 **Вывод:**
@@ -1522,7 +1714,7 @@ N10 CYCLE81(10.0,0.0,2.0,-25.0,0.0)
 
 ---
 
-### Пример 16: CYCLE83 — цикл глубокого сверления
+### Пример 18: CYCLE83 — цикл глубокого сверления (с CycleCache)
 
 **APT:** `CYCLE83/10,0,2,-50,0,0,0,5,0.5,0,0.5,1,0,0`
 
@@ -1573,16 +1765,26 @@ def execute(context, command):
     oldp = command.numeric[12] if len(command.numeric) > 12 else 0.0
     axs = command.numeric[13] if len(command.numeric) > 13 else 0
 
-    # Modal caching (similar to CYCLE81)
-    # ... caching logic ...
-
-    # Build cycle call
-    cycle_str = (
-        f"CYCLE83({rtp:.1f},{rfp:.1f},{sdis:.1f},{dp:.1f},{dpr:.1f},"
-        f"{fdep:.1f},{fdpr:.1f},{dam:.3f},{dtb:.2f},{dts:.2f},"
-        f"{frf:.3f},{axn},{oldp:.3f},{axs})"
-    )
-    context.write(cycle_str)
+    # Формирование параметров для CycleCache
+    params = {
+        'RTP': rtp,
+        'RFP': rfp,
+        'SDIS': sdis,
+        'DP': dp,
+        'DPR': dpr,
+        'FDEP': fdep,
+        'FDPR': fdpr,
+        'DAM': dam,
+        'DTB': dtb,
+        'DTS': dts,
+        'FRF': frf,
+        'AXN': axn,
+        'OLDP': oldp,
+        'AXS': axs
+    }
+    
+    # Умный вывод с использованием CycleCache
+    context.cycleWriteIfDifferent("CYCLE83", params)
 ```
 
 **Вывод:**
@@ -1592,7 +1794,7 @@ N10 CYCLE83(10.0,0.0,2.0,-50.0,0.0,0.0,0.0,5.000,0.50,0.00,1.000,3,0.000,0)
 
 ---
 
-### Пример 17: SUBPROG — подпрограммы
+### Пример 19: SUBPROG — подпрограммы
 
 **APT:** `CALLSUB/1001` или `ENDSUB`
 
@@ -1649,6 +1851,143 @@ N12 M99          ; Return from subroutine
 
 ---
 
+## Продвинутые темы
+
+### Модальные команды
+
+**Модальность** означает, что команда действует до отмены или изменения.
+
+```python
+# Пример модальной подачи с использованием StateCache
+def execute(context, command):
+    feed = command.numeric[0]
+
+    # Проверяем, изменилась ли подача через StateCache
+    if not context.cacheHasChanged("LAST_FEED", feed):
+        return  # Не выводим — уже активна
+
+    # Выводим только при изменении
+    context.cacheSet("LAST_FEED", feed)
+    context.write(f"F{feed:.1f}")
+```
+
+**Модальные G-коды:**
+- G0/G1 — тип движения
+- G17/G18/G19 — плоскость дуги
+- G90/G91 — абсолютные/относительные координаты
+- G54-G59 — рабочие системы координат
+
+---
+
+### 5-осевая обработка (IJK → ABC)
+
+Для 5-осевых станков вектор направления (I,J,K) конвертируется в углы поворота (A,B,C).
+
+```python
+import math
+
+def ijk_to_abc(i, j, k):
+    """
+    Конвертация IJK вектора в ABC углы
+
+    Для Siemens 840D:
+    - A = вращение вокруг X
+    - B = вращение вокруг Y
+    """
+    # A угол (вокруг X)
+    a = math.degrees(math.atan2(j, k))
+
+    # B угол (вокруг Y)
+    b = math.degrees(math.atan2(i, math.sqrt(j*j + k*k)))
+
+    # Нормализация к 0-360
+    if a < 0:
+        a += 360
+    if b < 0:
+        b += 360
+
+    return round(a, 3), round(b, 3), 0.0
+
+
+# Использование в макросе GOTO
+def execute(context, command):
+    # Получение IJK
+    i = command.numeric[3] if len(command.numeric) > 3 else None
+    j = command.numeric[4] if len(command.numeric) > 4 else None
+    k = command.numeric[5] if len(command.numeric) > 5 else None
+
+    if i is not None and j is not None and k is not None:
+        # Конвертация в ABC
+        a, b, c = ijk_to_abc(i, j, k)
+
+        context.registers.a = a
+        context.registers.b = b
+
+        # Вывод с поворотными осями
+        context.write(f"G1 X{x:.3f} Y{y:.3f} Z{z:.3f} A{a:.3f} B{b:.3f}")
+```
+
+---
+
+### Работа с конфигурацией
+
+**Чтение пользовательских параметров:**
+
+```python
+# Из JSON конфигурации станка
+use_soft_start = context.config.getParameterBool("softStart", False)
+feed_override = context.config.getParameterDouble("feedOverride", 100.0)
+custom_code = context.config.getParameterString("footerCode", "M30")
+
+# Использование в макросе
+if use_soft_start:
+    context.write("G04 P1.0")  # Пауза 1 секунда
+```
+
+**Пример конфигурации (`configs/machines/my_machine.json`):**
+
+```json
+{
+  "name": "My Custom Machine",
+  "machineProfile": "custom_01",
+  "customParameters": {
+    "softStart": true,
+    "feedOverride": 120.0,
+    "useCustomFeature": true,
+    "footerCode": "M30"
+  },
+  "customGCodes": {
+    "rapidOverride": "G00.1"
+  },
+  "customMCodes": {
+    "toolClamp": "M10",
+    "toolUnclamp": "M11"
+  }
+}
+```
+
+---
+
+### Глобальные переменные
+
+**Создание и использование:**
+
+```python
+# Установка значения
+context.globalVars.SetDouble("CUSTOM_FEED", 500.0)
+context.globalVars.SetInt("CUSTOM_COUNTER", 10)
+context.globalVars.SetBool("CUSTOM_FLAG", True)
+context.globalVars["CUSTOM_STRING"] = "value"
+
+# Чтение значения
+feed = context.globalVars.GetDouble("CUSTOM_FEED", 0.0)
+counter = context.globalVars.GetInt("CUSTOM_COUNTER", 0)
+flag = context.globalVars.GetBool("CUSTOM_FLAG", False)
+value = context.globalVars["CUSTOM_STRING"]
+```
+
+---
+
 ## Отладка
 
 ### Вывод отладочной информации
@@ -1660,11 +1999,11 @@ def execute(context, command):
     context.comment(f"DEBUG: numeric={command.numeric}")
     context.comment(f"DEBUG: minorWords={command.minorWords}")
     context.comment(f"DEBUG: lineNumber={command.lineNumber}")
-    
+
     # Вывод текущих регистров
     context.comment(f"DEBUG: X={context.registers.x}")
     context.comment(f"DEBUG: F={context.registers.f}")
-    
+
     # Вывод системных переменных
     context.comment(f"DEBUG: MOTION={context.system.MOTION}")
 ```
@@ -1706,6 +2045,8 @@ dotnet run -- -i input.apt -o output.nc -c siemens --debug
 | `CYCLE81` | Сверлильный цикл | `base/cycle81.py` |
 | `CYCLE83` | Цикл глубокого сверления | `base/cycle83.py` |
 | `SUBPROG` | Подпрограммы | `base/subprog.py` |
+| `COMMENT` | Комментарии | `base/comment.py` |
+| `CYCLE800` | Поворотный цикл | `siemens/cycle800.py` |
 
 #### Контроллер-специфичные макросы (siemens/, fanuc/, etc.)
 
@@ -1727,6 +2068,25 @@ dotnet run -- -i input.apt -o output.nc -c siemens --debug
 | `context.globalVars` | PythonGlobalVariables | Глобальные переменные |
 | `context.currentFeed` | float | Текущая подача |
 | `context.currentMotionType` | str | Текущий тип движения |
+
+---
+
+### Продвинутые методы context
+
+| Метод | Описание | Пример |
+|-------|----------|--------|
+| `cacheGet(key, default)` | Получить из кэша | `feed = context.cacheGet("LAST_FEED", 0.0)` |
+| `cacheSet(key, value)` | Установить в кэш | `context.cacheSet("LAST_FEED", 500.0)` |
+| `cacheHasChanged(key, value)` | Проверить изменение | `if context.cacheHasChanged("LAST_FEED", feed):` |
+| `cacheGetOrSet(key, default)` | Получить или установить | `tool = context.cacheGetOrSet("LAST_TOOL", 0)` |
+| `cacheReset(key)` | Сбросить кэш | `context.cacheReset("LAST_FEED")` |
+| `cacheResetAll()` | Сбросить весь кэш | `context.cacheResetAll()` |
+| `cycleWriteIfDifferent(name, params)` | Записать цикл если отличается | `context.cycleWriteIfDifferent("CYCLE800", params)` |
+| `cycleReset(name)` | Сбросить кэш цикла | `context.cycleReset("CYCLE800")` |
+| `cycleGetCache(name)` | Получить кэш цикла | `cache = context.cycleGetCache("CYCLE800")` |
+| `getNumericWord(address)` | Получить NC-слово | `xWord = context.getNumericWord('X')` |
+| `setNumericValue(address, value)` | Установить значение | `context.setNumericValue('X', 100.5)` |
+| `getFormattedValue(address)` | Получить отформатированное | `xStr = context.getFormattedValue('X')` |
 
 ---
 
@@ -1880,12 +2240,11 @@ context.registers.z = z
 
 **Решение:**
 ```python
-# Для подачи
-last_feed = context.globalVars.GetDouble("LAST_FEED", 0.0)
-if last_feed == feed:
+# Для подачи с использованием StateCache
+if not context.cacheHasChanged("LAST_FEED", feed):
     return  # Не выводим
 
-context.globalVars.SetDouble("LAST_FEED", feed)
+context.cacheSet("LAST_FEED", feed)
 context.write(f"F{feed:.1f}")
 
 # Для типа движения
@@ -1913,13 +2272,13 @@ import math
 def ijk_to_abc(i, j, k):
     a = math.degrees(math.atan2(j, k))
     b = math.degrees(math.atan2(i, math.sqrt(j*j + k*k)))
-    
+
     # Нормализация
     if a < 0:
         a += 360
     if b < 0:
         b += 360
-    
+
     return round(a, 3), round(b, 3), 0.0
 ```
 
@@ -1987,6 +2346,8 @@ a = math.degrees(math.atan2(j, k))
 ```
 
 ### 6. Тестируйте на простых примерах
+
+Создайте тестовый APT-файл:
 
 ```
 # Простой тестовый APT
