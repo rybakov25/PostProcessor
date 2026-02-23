@@ -148,7 +148,7 @@ public class BlockWriter
                 word.ResetChangeFlag();
         }
 
-        if (parts.Count > 1 || _blockNumberingEnabled)
+        if (parts.Count > 0)
         {
             _writer.WriteLine(string.Join(_separator, parts));
             return true;

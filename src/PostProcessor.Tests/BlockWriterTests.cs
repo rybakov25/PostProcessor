@@ -160,18 +160,26 @@ public class BlockWriterTests : IDisposable
     [Fact]
     public void WriteBlock_WithoutBlockNumber()
     {
-        // Arrange
-        _blockWriter.BlockNumberingEnabled = false;
-        _xRegister.SetValue(100.5);
-        _blockWriter.AddWord(_xRegister);  // Add register to block writer
+        // Arrange - create fresh instances for this test
+        var stringWriter = new StringWriter();
+        var blockWriter = new BlockWriter(stringWriter);
+        var xRegister = new Register("X", 0.0, true, "F3");
+        var yRegister = new Register("Y", 0.0, true, "F3");
+        blockWriter.AddWords(xRegister, yRegister);
+        blockWriter.BlockNumberingEnabled = false;
+        
+        xRegister.SetValue(100.5);
+        yRegister.SetValue(200.3);
 
         // Act
-        _blockWriter.WriteBlock(includeBlockNumber: false);
+        var result = blockWriter.WriteBlock(includeBlockNumber: false);
 
         // Assert
-        var output = _stringWriter.ToString();
+        var output = stringWriter.ToString().Trim();
+        Assert.True(result); // Block was written
         Assert.DoesNotContain("N", output);
-        Assert.Contains("X", output);
+        Assert.Contains("X100.500", output);
+        Assert.Contains("Y200.300", output);
     }
 
     [Fact]
