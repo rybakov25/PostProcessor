@@ -1,34 +1,182 @@
 {
+  "$schema": "machine-profile-schema.json",
   "name": "Haas VF-2",
   "manufacturer": "Haas Automation",
-  "type": "Milling",
-  "minX": -50.0,
-  "maxX": 510.0,
-  "minY": -50.0,
-  "maxY": 410.0,
-  "minZ": -40.0,
-  "maxZ": 410.0,
-  "minA": -120.0,
-  "maxA": 120.0,
-  "minB": 0.0,
-  "maxB": 360.0,
-  "maxFeedX": 12700.0,
-  "maxFeedY": 12700.0,
-  "maxFeedZ": 12700.0,
-  "hasAxisA": true,
-  "hasAxisB": false,
-  "hasAxisC": false,
-  "kinematicsType": "table-head",
+  "machineProfile": "vf2_01",
+  "machineType": "Milling",
+  "version": "NGC",
+  "description": "Haas VF-2 vertical machining center with NGC control",
+
+  "axes": {
+    "linear": ["X", "Y", "Z"],
+    "rotary": [],
+    "primary": "X",
+    "secondary": "Y",
+    "tertiary": "Z"
+  },
+
+  "limits": {
+    "X": { "min": -50, "max": 510 },
+    "Y": { "min": -50, "max": 410 },
+    "Z": { "min": -40, "max": 410 },
+    "A": { "min": -120, "max": 120 },
+    "B": { "min": 0, "max": 360 },
+    "C": { "min": 0, "max": 360 }
+  },
+
+  "registerFormats": {
+    "X": {
+      "address": "X",
+      "format": "F4.3",
+      "isModal": true,
+      "minValue": -50,
+      "maxValue": 510
+    },
+    "Y": {
+      "address": "Y",
+      "format": "F4.3",
+      "isModal": true,
+      "minValue": -50,
+      "maxValue": 410
+    },
+    "Z": {
+      "address": "Z",
+      "format": "F4.3",
+      "isModal": true,
+      "minValue": -40,
+      "maxValue": 410
+    },
+    "F": {
+      "address": "F",
+      "format": "F3.1",
+      "isModal": false,
+      "minValue": 1,
+      "maxValue": 12700
+    },
+    "S": {
+      "address": "S",
+      "format": "F0",
+      "isModal": false,
+      "minValue": 10,
+      "maxValue": 8100
+    },
+    "T": {
+      "address": "T",
+      "format": "F0",
+      "isModal": false,
+      "minValue": 1,
+      "maxValue": 24
+    }
+  },
+
+  "functionCodes": {
+    "rapid": { "code": "G00", "group": "MOTION", "isModal": true },
+    "linear": { "code": "G01", "group": "MOTION", "isModal": true },
+    "cw_arc": { "code": "G02", "group": "MOTION", "isModal": true },
+    "ccw_arc": { "code": "G03", "group": "MOTION", "isModal": true },
+    "spindle_cw": { "code": "M03", "group": "SPINDLE", "isModal": true },
+    "spindle_ccw": { "code": "M04", "group": "SPINDLE", "isModal": true },
+    "spindle_stop": { "code": "M05", "group": "SPINDLE", "isModal": false },
+    "coolant_flood": { "code": "M08", "group": "COOLANT", "isModal": true },
+    "coolant_mist": { "code": "M07", "group": "COOLANT", "isModal": true },
+    "coolant_off": { "code": "M09", "group": "COOLANT", "isModal": false },
+    "tool_change": { "code": "M06", "group": "TOOL_CHANGE", "isModal": false },
+    "program_end": { "code": "M30", "group": "PROGRAM", "isModal": false }
+  },
+
+  "workCoordinateSystems": [
+    { "number": 1, "code": "G54", "xOffset": 0.0, "yOffset": 0.0, "zOffset": 0.0 },
+    { "number": 2, "code": "G55", "xOffset": 0.0, "yOffset": 0.0, "zOffset": 0.0 },
+    { "number": 3, "code": "G56", "xOffset": 0.0, "yOffset": 0.0, "zOffset": 0.0 }
+  ],
+
+  "drillingCycles": {
+    "drill": "G81",
+    "peckDrill": "G83",
+    "tapping": "G84",
+    "boring": "G85",
+    "fineBoring": "G76"
+  },
+
+  "safety": {
+    "clearancePlane": 100.0,
+    "retractPlane": 5.0,
+    "maxFeedRate": 12700.0,
+    "maxSpindleSpeed": 8100.0,
+    "minThreadFeed": 0.1,
+    "autoToolChangeRetract": true,
+    "enableTravelLimitsCheck": true
+  },
+
+  "multiAxis": {
+    "enableRtcp": false,
+    "maxA": 120.0,
+    "minA": -120.0,
+    "maxB": 360.0,
+    "minB": 0.0,
+    "strategy": "cartesian"
+  },
+
+  "templates": {
+    "enabled": true,
+    "header": [
+      "(POSTPROCESSED FOR HAAS VF-2)",
+      "(DATE: {dateTime})"
+    ],
+    "footer": [
+      "M30"
+    ],
+    "includeTimestamp": true,
+    "includeToolList": true
+  },
+
+  "customParameters": {
+    "useHighSpeedMachining": true,
+    "highSpeedCode": "G05.1Q1",
+    "enableLookAhead": true,
+    "defaultWorkOffset": "G54",
+    "toolChangePosition": "G91 G28 Z0",
+    "rapidOverride": 100
+  },
+
+  "customGCodes": {
+    "workOffset": "G54",
+    "cancelCycle": "G80"
+  },
+
+  "customMCodes": {
+    "palletChange": "M60",
+    "airBlast": "M50"
+  },
+
+  "axisLimits": {
+    "XMin": -50,
+    "XMax": 510,
+    "YMin": -50,
+    "YMax": 410,
+    "ZMin": -40,
+    "ZMax": 410
+  },
+
   "protectedZones": [
     {
       "number": 1,
-      "minX": -10.0,
-      "maxX": 10.0,
-      "minY": -10.0,
-      "maxY": 10.0,
-      "minZ": 380.0,
-      "maxZ": 410.0,
-      "isActive": true
+      "minX": -10,
+      "maxX": 10,
+      "minY": -10,
+      "maxY": 10,
+      "minZ": 380,
+      "maxZ": 410,
+      "isActive": true,
+      "description": "Spindle protection zone"
     }
-  ]
+  ],
+
+  "macros": {
+    "init": "haas/init.py",
+    "fini": "haas/fini.py",
+    "goto": "haas/goto.py",
+    "rapid": "haas/rapid.py",
+    "toolChange": "haas/loadtl.py"
+  }
 }
