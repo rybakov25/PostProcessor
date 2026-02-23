@@ -30,6 +30,40 @@ public class TextNCWord : NCWord
     }
 
     /// <summary>
+    /// Создать текстовое NC-слово из настроек конфига
+    /// </summary>
+    /// <param name="config">Конфигурация контроллера</param>
+    /// <param name="text">Текст комментария</param>
+    public TextNCWord(Config.Models.ControllerConfig config, string text)
+    {
+        _text = text;
+        var commentStyle = config.Formatting.Comments;
+        
+        // Установка стиля в зависимости от типа
+        switch (commentStyle.Type.ToLowerInvariant())
+        {
+            case "semicolon":
+                _prefix = commentStyle.SemicolonPrefix;
+                _suffix = "";
+                break;
+            case "both":
+                // Для типа "both" используем parentheses + semicolon
+                _prefix = commentStyle.Prefix;
+                _suffix = commentStyle.Suffix + " " + commentStyle.SemicolonPrefix + " ";
+                break;
+            default: // parentheses
+                _prefix = commentStyle.Prefix;
+                _suffix = commentStyle.Suffix;
+                break;
+        }
+        
+        _transliterate = commentStyle.Transliterate;
+        _maxLength = commentStyle.MaxLength > 0 ? commentStyle.MaxLength : null;
+        IsModal = false;
+        _hasChanged = true;
+    }
+
+    /// <summary>
     /// Текст комментария
     /// </summary>
     public string Text

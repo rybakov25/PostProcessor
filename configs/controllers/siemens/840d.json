@@ -17,10 +17,20 @@
       "increment": 10,
       "start": 10
     },
+    "comments": {
+      "type": "parentheses",
+      "prefix": "(",
+      "suffix": ")",
+      "semicolonPrefix": ";",
+      "maxLength": 128,
+      "transliterate": false,
+      "allowSpecialCharacters": true
+    },
     "coordinates": {
       "decimals": 3,
       "trailingZeros": false,
-      "decimalPoint": true
+      "decimalPoint": true,
+      "leadingZeros": true
     },
     "feedrate": {
       "decimals": 1,

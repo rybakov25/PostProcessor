@@ -31,6 +31,20 @@ public class SequenceNCWord : NCWord
     }
 
     /// <summary>
+    /// Создать счётчик из настроек конфига
+    /// </summary>
+    /// <param name="config">Конфигурация контроллера</param>
+    public SequenceNCWord(Config.Models.ControllerConfig config)
+        : this(
+            config.Formatting.BlockNumber.Start,
+            config.Formatting.BlockNumber.Increment,
+            config.Formatting.BlockNumber.Prefix,
+            "",
+            isModal: false)
+    {
+    }
+
+    /// <summary>
     /// Текущее значение счётчика
     /// </summary>
     public int Value => _value;
