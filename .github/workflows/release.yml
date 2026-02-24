@@ -1,4 +1,4 @@
- name: Release - Create Package
+name: Release - Create Package
 
 on:
   push:
