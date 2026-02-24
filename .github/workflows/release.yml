@@ -41,11 +41,11 @@ jobs:
       run: dotnet build PostProcessor.sln -c ${{ env.CONFIGURATION }} --no-restore
 
     - name: Run tests
-      run: dotnet test src/PostProcessor.Tests/PostProcessor.Tests.csproj -c ${{ env.CONFIGURATION }} --no-build --verbosity normal
+      run: dotnet test src/PostProcessor.Tests/PostProcessor.Tests.csproj -c ${{ env.CONFIGURATION }} #--no-build --verbosity normal
       shell: bash
 
     - name: Publish CLI application (win-x64)
-      run: dotnet publish src/PostProcessor.CLI/PostProcessor.CLI.csproj -c ${{ env.CONFIGURATION }} -r win-x64 --self-contained true -p:PublishSingleFile=true -p:IncludeNativeLibrariesForSelfExtract=true -o ./publish/win-x64
+      run: dotnet publish src/PostProcessor.CLI/PostProcessor.CLI.csproj -c ${{ env.CONFIGURATION }} -r win-x64 --self-contained -p:PublishSingleFile=true -p:IncludeNativeLibrariesForSelfExtract=true -o ./publish/win-x64
 
     - name: Publish CLI application (linux-x64)
       run: dotnet publish src/PostProcessor.CLI/PostProcessor.CLI.csproj -c ${{ env.CONFIGURATION }} -r linux-x64 --self-contained true -p:PublishSingleFile=true -p:IncludeNativeLibrariesForSelfExtract=true -o ./publish/linux-x64

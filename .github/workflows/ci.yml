@@ -41,7 +41,7 @@ jobs:
       run: dotnet build PostProcessor.sln -c ${{ env.CONFIGURATION }} --no-restore
 
     - name: Run tests
-      run: dotnet test src/PostProcessor.Tests/PostProcessor.Tests.csproj -c ${{ env.CONFIGURATION }} --no-build --verbosity normal --logger trx --results-directory TestResults
+      run: dotnet test src/PostProcessor.Tests/PostProcessor.Tests.csproj -c ${{ env.CONFIGURATION }} #--no-build --verbosity normal --logger trx --results-directory TestResults
 
     - name: Upload test results
       uses: actions/upload-artifact@v4
