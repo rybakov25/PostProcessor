@@ -1,9 +1,9 @@
-name: Release - Create Package
+ name: Release - Create Package
 
 on:
   push:
     tags:
-      - 'v*'  # Trigger on version tags (v1.0.0, v2.1.3, etc.)
+      - 'v*'  # Trigger on version tags (v.., v.., etc.)
 
 env:
   DOTNET_VERSION: '8.0.x'
@@ -14,62 +14,103 @@ jobs:
   create-release:
     name: Create Release
     runs-on: windows-latest
-    
+
     steps:
-    - name: Checkout code
-      uses: actions/checkout@v4
+      - name: Checkout code
+        uses: actions/checkout@v4
 
-    - name: Setup .NET
-      uses: actions/setup-dotnet@v4
-      with:
-        dotnet-version: ${{ env.DOTNET_VERSION }}
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: ${{ env.DOTNET_VERSION }}
 
-    - name: Setup Python
-      uses: actions/setup-python@v5
-      with:
-        python-version: ${{ env.PYTHON_VERSION }}
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
 
-    - name: Get version from tag
-      id: get_version
-      run: echo "VERSION=${GITHUB_REF#refs/tags/v}" >> $GITHUB_OUTPUT
-      shell: bash
+      - name: Get version from tag
+        id: get_version
+        run: echo "VERSION=${GITHUB_REF#refs/tags/v}" >> $GITHUB_OUTPUT
+        shell: bash
 
-    - name: Restore dependencies
-      run: dotnet restore PostProcessor.sln
+      - name: Restore dependencies
+        run: dotnet restore PostProcessor.sln
 
-    - name: Build
-      run: dotnet build PostProcessor.sln -c ${{ env.CONFIGURATION }} --no-restore
+      - name: Build
+        run: dotnet build PostProcessor.sln -c ${{ env.CONFIGURATION }} --no-restore
 
-    - name: Run tests
-      run: dotnet test src/PostProcessor.Tests/PostProcessor.Tests.csproj -c ${{ env.CONFIGURATION }} #--no-build --verbosity normal
-      shell: bash
+      - name: Run tests
+        run: dotnet test src/PostProcessor.Tests/PostProcessor.Tests.csproj -c ${{ env.CONFIGURATION }}
+        shell: bash
 
-    - name: Publish CLI application (win-x64)
-      run: dotnet publish src/PostProcessor.CLI/PostProcessor.CLI.csproj -c ${{ env.CONFIGURATION }} -r win-x64 --self-contained -p:PublishSingleFile=true -p:IncludeNativeLibrariesForSelfExtract=true -o ./publish/win-x64
+      - name: Publish CLI application (win-x64)
+        run: |
+          dotnet publish src/PostProcessor.CLI/PostProcessor.CLI.csproj `
+            -c ${{ env.CONFIGURATION }} `
+            -r win-x64`
+            --self-contained `
+            -p:PublishSingleFile=true `
+            -p:IncludeNativeLibrariesForSelfExtract=true `
+            -o ./publish/win-x64
+        shell: pwsh
 
-    - name: Publish CLI application (linux-x64)
-      run: dotnet publish src/PostProcessor.CLI/PostProcessor.CLI.csproj -c ${{ env.CONFIGURATION }} -r linux-x64 --self-contained true -p:PublishSingleFile=true -p:IncludeNativeLibrariesForSelfExtract=true -o ./publish/linux-x64
+      - name: Publish CLI application (linux-x)
+        run: |
+          dotnet publish src/PostProcessor.CLI/PostProcessor.CLI.csproj `
+            -c ${{ env.CONFIGURATION }} `
+            -r linux-x64`
+            --self-contained `
+            -p:PublishSingleFile=true `
+            -p:IncludeNativeLibrariesForSelfExtract=true `
+            -o ./publish/linux-x64
+        shell: pwsh
 
-    - name: Create release archive (Windows)
-      run: |
-        Compress-Archive -Path ./publish/win-x64/* -DestinationPath ./PostProcessor-${{ steps.get_version.outputs.VERSION }}-win-x64.zip
-      shell: pwsh
+      - name: Copy configs and macros (Windows)
+        run: |
+          Copy-Item -Path configs -Destination ./publish/win-x64/configs -Recurse -Force
+          Copy-Item -Path macros -Destination ./publish/win-x64/macros -Recurse -Force
+        shell: pwsh
 
-    - name: Create release archive (Linux)
-      run: |
-        cd publish/linux-x64
-        zip -r ../../PostProcessor-${{ steps.get_version.outputs.VERSION }}-linux-x64.zip *
-      shell: bash
+      - name: Copy configs and macros (Linux)
+        run: |
+          cp -r configs ./publish/linux-x64/
+          cp -r macros ./publish/linux-x64/
+        shell: bash
 
-    - name: Create GitHub Release
-      uses: softprops/action-gh-release@v1
-      with:
-        name: Release v${{ steps.get_version.outputs.VERSION }}
-        draft: false
-        prerelease: false
-        generate_release_notes: true
-        files: |
-          PostProcessor-${{ steps.get_version.outputs.VERSION }}-win-x64.zip
-          PostProcessor-${{ steps.get_version.outputs.VERSION }}-linux-x64.zip
-      env:
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      - name: Create release archive (Windows)
+        run: |
+          Compress-Archive -Path ./publish/win-x64/* `
+          -DestinationPath ./PostProcessor-${{ steps.get_version.outputs.VERSION }}-win-x64.zip `
+          -Force
+        shell: pwsh
+
+      - name: Create release archive (Linux)
+        run: |
+          cd publish/linux-x64
+          zip -r ../../PostProcessor-${{ steps.get_version.outputs.VERSION }}-linux-x64.zip *
+          cd ../..
+        shell: bash
+
+      - name: Verify archives exist
+        run: |
+          if (!(Test-Path "./PostProcessor-${{ steps.get_version.outputs.VERSION }}-win-x64.zip")) {
+            throw "Windows archive not found"
+          }
+          if (!(Test-Path "./PostProcessor-${{ steps.get_version.outputs.VERSION }}-linux-x64.zip")) {
+            throw "Linux archive not found"
+          }
+        shell: pwsh
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v1
+        with:
+          name: Release v${{ steps.get_version.outputs.VERSION }}
+          draft: false
+          prerelease: false
+          generate_release_notes: true
+          files: |
+            PostProcessor-${{ steps.get_version.outputs.VERSION }}-win-x64.zip
+            PostProcessor-${{ steps.get_version.outputs.VERSION }}-linux-x64.zip
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
