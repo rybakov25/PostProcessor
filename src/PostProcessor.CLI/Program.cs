@@ -53,7 +53,7 @@ public static class Program
             getDefaultValue: () => false,
             description: "Validate APT syntax only (no G-code generation)");
 
-        var rootCommand = new RootCommand("PostProcessor v1.0 - APT/CL to G-code converter for CNC machines")
+        var rootCommand = new RootCommand("PostProcessor v1.1 - APT/CL to G-code converter for CNC machines")
         {
             inputOption,
             outputOption,
@@ -92,7 +92,7 @@ public static class Program
     {
         try
         {
-            Console.WriteLine("PostProcessor v1.0 - APT/CL to G-code Converter");
+            Console.WriteLine("PostProcessor v1.1 - APT/CL to G-code Converter");
             Console.WriteLine($"Controller: {controller.ToUpperInvariant()}");
             if (!string.IsNullOrEmpty(machine))
             {
@@ -272,7 +272,7 @@ public static class Program
             {
                 // Header по умолчанию если не указан в конфиге
                 await writer.WriteLineAsync("(==================================================)");
-                await writer.WriteLineAsync($"(; PostProcessor v1.0 for {config.Name} ;)");
+                await writer.WriteLineAsync($"(; PostProcessor v1.1 for {config.Name} ;)");
                 await writer.WriteLineAsync($"(; Input: {Path.GetFileName(input)} ;)");
                 await writer.WriteLineAsync($"(; Generated: {DateTime.Now:yyyy-MM-dd HH:mm:ss} ;)");
                 await writer.WriteLineAsync("(==================================================)");
