@@ -17,17 +17,3 @@ def execute(context, command):
     # Set motion type to RAPID for next GOTO
     context.system.MOTION = 'RAPID'
     context.currentMotionType = 'RAPID'
-
-    # If coordinates in command, output G0 with coordinates immediately
-    if command.numeric and len(command.numeric) > 0:
-        x = command.numeric[0] if len(command.numeric) > 0 else context.registers.x
-        y = command.numeric[1] if len(command.numeric) > 1 else context.registers.y
-        z = command.numeric[2] if len(command.numeric) > 2 else context.registers.z
-
-        # Update registers
-        context.registers.x = x
-        context.registers.y = y
-        context.registers.z = z
-
-        # Write G0 with coordinates in one block
-        context.write(f"G0 X{x:.3f} Y{y:.3f} Z{z:.3f}")

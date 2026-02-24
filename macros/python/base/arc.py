@@ -4,11 +4,11 @@ CIRCLE/ARC MACRO - Circular Interpolation G02/G03
 
 Handles circular interpolation commands from APT with support for:
 - IJK format (arc center offsets from start point)
-- R format (arc radius with sign for angle >180Â°)
+- R format (arc radius with sign for angle >180°)
 - Automatic format selection based on controller configuration
 - Working planes: G17 (XY), G18 (XZ), G19 (YZ)
 - Helical arcs with simultaneous Z axis movement
-- Full circles and arcs >180Â° (automatically use IJK format)
+- Full circles and arcs >180° (automatically use IJK format)
 
 APT Command Formats:
     CIRCLE/X, x, Y, y, Z, z, I, i, J, j, K, k    - IJK format
@@ -144,7 +144,7 @@ def execute(context, command):
     # Get controller configuration for arc format preference
     use_r_format = _should_use_radius_format(context, arc_format, r_radius)
 
-    # Calculate arc angle to determine if >180Â° (requires IJK)
+    # Calculate arc angle to determine if >180° (requires IJK)
     arc_angle = _calculate_arc_angle(
         context.registers.x, context.registers.y, context.registers.z,
         x_end, y_end, z_end,
@@ -152,10 +152,10 @@ def execute(context, command):
         r_radius if use_r_format else None
     )
 
-    # Force IJK format for arcs >180Â° (R format ambiguous)
+    # Force IJK format for arcs >180° (R format ambiguous)
     if abs(arc_angle) > 180.0:
         use_r_format = False
-        context.comment("Arc >180Â° - using IJK format")
+        context.comment("Arc >180° - using IJK format")
 
     # =========================================================================
     # Step 4: Update context registers
@@ -402,7 +402,7 @@ def _should_use_radius_format(context, arc_format: int, r_radius: Optional[float
     Decision based on:
     1. Controller configuration (circlesThroughRadius)
     2. Original command format
-    3. Arc geometry (>180Â° requires IJK)
+    3. Arc geometry (>180° requires IJK)
 
     Args:
         context: Postprocessor context
@@ -615,7 +615,7 @@ def calculate_helix_pitch(
     # Calculate arc angle (simplified - assumes XY plane)
     z_change = z_end - z_start
 
-    # For a full circle (360Â°), pitch equals Z change
+    # For a full circle (360°), pitch equals Z change
     # For partial arcs, scale proportionally
     arc_angle = _calculate_arc_angle(0, 0, z_start, 0, 0, z_end, i_center, j_center, k_center, None)
 
