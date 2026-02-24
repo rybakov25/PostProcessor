@@ -93,3 +93,31 @@ def execute(context, command):
     
     # === Setup block numbering ===
     context.setBlockNumbering(start=1, increment=2, enabled=True)
+    
+    # === Optional: Print tool list at start ===
+    if context.config.get("printToolListAtStart", False):
+        _print_tool_list(context)
+
+
+def _print_tool_list(context):
+    """
+    Print tool list at the beginning of the program
+    
+    Args:
+        context: Postprocessor context
+    """
+    context.comment("TOOL LIST")
+    
+    # Get tools from project (if available)
+    tools = context.get_project_tools() if hasattr(context, 'get_project_tools') else []
+    
+    if tools:
+        # Sort by tool number
+        sorted_tools = sorted(tools, key=lambda t: t.get('number', 0))
+        
+        for tool in sorted_tools:
+            number = tool.get('number', 0)
+            name = tool.get('name', 'UNKNOWN')
+            context.comment(f"T{number} - {name}")
+        
+        context.comment("END TOOL LIST")

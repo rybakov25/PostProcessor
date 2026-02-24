@@ -22,11 +22,6 @@ public class PythonPostContext
         machine = new PythonMachineState(context.Machine);
         system = new PythonSystemVariables(context);
         globalVars = new PythonGlobalVariables(context);
-        
-        // Инициализация нумерации блоков
-        _blockNumber = 1;
-        _blockIncrement = 2;
-        _blockNumberEnabled = true;
     }
 
     // === Регистры ===
@@ -47,20 +42,15 @@ public class PythonPostContext
     // === Переменные состояния ===
     public double? currentFeed { get; set; }
     public string currentMotionType { get; set; } = "LINEAR";
-    
-    // === Поля для нумерации блоков ===
-    private int _blockNumber;
-    private int _blockIncrement;
-    private bool _blockNumberEnabled;
-    
+
     // === Методы управления нумерацией ===
     public void setBlockNumbering(int start = 1, int increment = 2, bool enabled = true)
     {
         _context.SetSystemVariable("BLOCK_NUMBER", start);
         _context.SetSystemVariable("BLOCK_INCREMENT", increment);
-        _blockNumberEnabled = enabled;
+        _context.SetSystemVariable("BLOCK_NUMBER_ENABLED", enabled);
     }
-    
+
     public int getNextBlockNumber()
     {
         int num = _context.GetSystemVariable("BLOCK_NUMBER", 1);
@@ -68,36 +58,167 @@ public class PythonPostContext
         _context.SetSystemVariable("BLOCK_NUMBER", num + increment);
         return num;
     }
-    
+
+    // === StateCache методы (IMSPost-style LAST_* variables) ===
+
+    /// <summary>
+    /// Получить значение из кэша состояний
+    /// </summary>
+    public T cacheGet<T>(string key, T defaultValue = default!)
+    {
+        return _context.StateCache.Get(key, defaultValue);
+    }
+
+    /// <summary>
+    /// Установить значение в кэш состояний
+    /// </summary>
+    public void cacheSet<T>(string key, T value)
+    {
+        _context.StateCache.Update(key, value);
+    }
+
+    /// <summary>
+    /// Проверить, изменилось ли значение по сравнению с кэшем
+    /// </summary>
+    public bool cacheHasChanged<T>(string key, T value)
+    {
+        return _context.StateCache.HasChanged(key, value);
+    }
+
+    /// <summary>
+    /// Получить или установить значение в кэше состояний
+    /// </summary>
+    public T cacheGetOrSet<T>(string key, T defaultValue = default!)
+    {
+        return _context.StateCache.GetOrSet(key, defaultValue);
+    }
+
+    /// <summary>
+    /// Сбросить значение из кэша состояний
+    /// </summary>
+    public void cacheReset(string key)
+    {
+        _context.StateCache.Remove(key);
+    }
+
+    /// <summary>
+    /// Сбросить весь кэш состояний
+    /// </summary>
+    public void cacheResetAll()
+    {
+        _context.StateCache.Clear();
+    }
+
+    // === CycleCache методы ===
+
+    /// <summary>
+    /// Записать цикл, если параметры отличаются от закэшированных
+    /// </summary>
+    /// <param name="cycleName">Имя цикла (например, "CYCLE800")</param>
+    /// <param name="parameters">Параметры цикла</param>
+    /// <returns>true если записано полное определение</returns>
+    public bool cycleWriteIfDifferent(string cycleName, Dictionary<string, object> parameters)
+    {
+        return _context.WriteCycleIfDifferent(cycleName, parameters);
+    }
+
+    /// <summary>
+    /// Сбросить кэш цикла
+    /// </summary>
+    public void cycleReset(string cycleName)
+    {
+        _context.ResetCycleCache(cycleName);
+    }
+
+    /// <summary>
+    /// Получить или создать кэш цикла
+    /// </summary>
+    /// <param name="cycleName">Имя цикла</param>
+    /// <returns>CycleCache</returns>
+    public CycleCache cycleGetCache(string cycleName)
+    {
+        return CycleCacheHelper.GetOrCreate(_context, cycleName);
+    }
+
+    // === NumericNCWord методы ===
+
+    /// <summary>
+    /// Получить NumericNCWord по адресу
+    /// </summary>
+    /// <param name="address">Адрес (X, Y, Z, F, S...)</param>
+    /// <returns>NumericNCWord</returns>
+    public NumericNCWord getNumericWord(string address)
+    {
+        return _context.GetNumericWord(address);
+    }
+
+    /// <summary>
+    /// Установить значение регистра через NumericNCWord (с форматированием из конфига)
+    /// </summary>
+    /// <param name="address">Адрес регистра</param>
+    /// <param name="value">Значение</param>
+    public void setNumericValue(string address, double value)
+    {
+        _context.SetNumericValue(address, value);
+    }
+
+    /// <summary>
+    /// Получить отформатированное значение регистра
+    /// </summary>
+    /// <param name="address">Адрес регистра</param>
+    /// <returns>Отформатированная строка</returns>
+    public string getFormattedValue(string address)
+    {
+        var word = getNumericWord(address);
+        return word.ToNCString();
+    }
+
+    /// <summary>
+    /// Записать комментарий с использованием стиля из конфига
+    /// </summary>
+    /// <param name="text">Текст комментария</param>
+    public void writeComment(string text)
+    {
+        comment(text);
+    }
+
     // === Методы вывода ===
+    /// <summary>
+    /// Записать строку через BlockWriter с автоматической модальностью
+    /// НЕ добавляет newline в конце - используйте writeBlock() для вывода блока
+    /// </summary>
     public void write(string line, bool suppressBlock = false)
     {
         if (!string.IsNullOrWhiteSpace(line))
         {
-            if (suppressBlock || !_blockNumberEnabled)
-            {
-                _context.Output.WriteLine(line);
-            }
-            else
-            {
-                int blockNum = getNextBlockNumber();
-                _context.Output.WriteLine($"N{blockNum} {line}");
-            }
+            _context.Output.Write(line);
             _context.Output.Flush();
         }
     }
 
+    /// <summary>
+    /// Записать строку и сразу вывести блок с модальной проверкой
+    /// Добавляет newline после блока
+    /// </summary>
     public void writeln(string line = "")
     {
-        _context.Output.WriteLine(line);
+        if (!string.IsNullOrWhiteSpace(line))
+        {
+            _context.Output.Write(line);
+        }
+        _context.BlockWriter.WriteBlock(true);
         _context.Output.Flush();
     }
 
+    /// <summary>
+    /// Записать комментарий в формате станка
+    /// Использует стиль из конфига (parentheses/semicolon/both)
+    /// </summary>
     public void comment(string text)
     {
         if (!string.IsNullOrWhiteSpace(text))
         {
-            _context.Output.WriteLine($"({text})");
+            _context.Comment(text);
             _context.Output.Flush();
         }
     }
@@ -111,12 +232,66 @@ public class PythonPostContext
         }
     }
     
+    /// <summary>
+    /// Записать NC-блок через BlockWriter
+    /// Добавляет newline в конце блока
+    /// </summary>
+    public void writeBlock(bool includeBlockNumber = true)
+    {
+        _context.BlockWriter.WriteBlock(includeBlockNumber);
+        _context.Output.WriteLine();  // Add newline after block
+        _context.Output.Flush();
+    }
+    
+    /// <summary>
+    /// Скрыть регистры (не выводить до изменения)
+    /// </summary>
+    public void hide(params string[] registerNames)
+    {
+        foreach (var name in registerNames)
+        {
+            var reg = getRegisterByName(name);
+            if (reg != null)
+                _context.BlockWriter.Hide(reg);
+        }
+    }
+    
+    /// <summary>
+    /// Показать регистры (вывести обязательно)
+    /// </summary>
+    public void show(params string[] registerNames)
+    {
+        foreach (var name in registerNames)
+        {
+            var reg = getRegisterByName(name);
+            if (reg != null)
+                _context.BlockWriter.Show(reg);
+        }
+    }
+    
+    private Register? getRegisterByName(string name)
+    {
+        return name.ToUpper() switch
+        {
+            "X" => _context.Registers.X,
+            "Y" => _context.Registers.Y,
+            "Z" => _context.Registers.Z,
+            "A" => _context.Registers.A,
+            "B" => _context.Registers.B,
+            "C" => _context.Registers.C,
+            "F" => _context.Registers.F,
+            "S" => _context.Registers.S,
+            "T" => _context.Registers.T,
+            _ => null
+        };
+    }
+
     // === Утилиты ===
     public double round(double value, int decimals = 3)
     {
         return Math.Round(value, decimals);
     }
-    
+
     public string format(double value, string format = "F3")
     {
         return value.ToString(format);
@@ -550,6 +725,18 @@ public class PythonGlobalVariables
         get => _context.GetSystemVariable(name, string.Empty);
         set => _context.SetSystemVariable(name, value);
     }
+
+    /// <summary>
+    /// Get value with default (generic)
+    /// </summary>
+    public object Get(string name, object defaultValue = null)
+        => _context.GetSystemVariable(name, defaultValue);
+
+    /// <summary>
+    /// Set value (generic)
+    /// </summary>
+    public void Set(string name, object value)
+        => _context.SetSystemVariable(name, value);
 
     public double GetDouble(string name, double defaultValue = 0.0)
         => _context.GetSystemVariable(name, defaultValue);

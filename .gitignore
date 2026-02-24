@@ -35,3 +35,6 @@ Thumbs.db
 # Logs
 *.log
 logs/
+
+# Generated statistics
+PROJECT_STATS.md

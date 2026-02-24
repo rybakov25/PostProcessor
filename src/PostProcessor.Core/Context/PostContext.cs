@@ -10,6 +10,16 @@ public class PostContext : IAsyncDisposable
     public MachineState Machine { get; } = new();
     public CatiaContext Catia { get; } = new();
     public StreamWriter Output { get; }
+    
+    /// <summary>
+    /// Умный формирователь NC-блоков с модальной проверкой
+    /// </summary>
+    public BlockWriter BlockWriter { get; }
+
+    /// <summary>
+    /// Кэш состояний для отслеживания изменений переменных (IMSPost-style LAST_* variables)
+    /// </summary>
+    public StateCache StateCache { get; } = new();
 
     /// <summary>
     /// Параметры безопасности станка (ограничения хода, максимальные скорости)
@@ -43,6 +53,11 @@ public class PostContext : IAsyncDisposable
     /// </summary>
     public ControllerConfig Config { get; set; } = new();
 
+    /// <summary>
+    /// Словарь NumericNCWord для форматирования по конфига
+    /// </summary>
+    public Dictionary<string, NumericNCWord> NumericWords { get; } = new();
+
     private bool _disposed = false;
 
     private int _commandCount;
@@ -51,9 +66,33 @@ public class PostContext : IAsyncDisposable
 
     public (int CommandCount, int MotionCount, int ToolChanges) GetStatistics() => (_commandCount, _motionCount, _toolChanges);
 
-    public PostContext(StreamWriter output)
+    public PostContext(StreamWriter output, ControllerConfig? config = null)
     {
         Output = output;
+        Config = config ?? new ControllerConfig();
+        BlockWriter = new BlockWriter(output);
+
+        // Регистрация регистров в BlockWriter для автоматического отслеживания
+        BlockWriter.AddWords(
+            Registers.X, Registers.Y, Registers.Z,
+            Registers.A, Registers.B, Registers.C,
+            Registers.F, Registers.S, Registers.T
+        );
+
+        // Создание NumericNCWord из конфига
+        InitializeNumericWords();
+    }
+
+    /// <summary>
+    /// Инициализировать NumericNCWord из конфига
+    /// </summary>
+    private void InitializeNumericWords()
+    {
+        var addresses = new[] { "X", "Y", "Z", "A", "B", "C", "F", "S", "T", "I", "J", "K" };
+        foreach (var addr in addresses)
+        {
+            NumericWords[addr] = new NumericNCWord(Config, addr);
+        }
     }
 
     /// <summary>
@@ -72,6 +111,125 @@ public class PostContext : IAsyncDisposable
         return _systemVariables.TryGetValue(name, out var value) && value is T typedValue
             ? typedValue
             : defaultValue;
+    }
+
+    // === StateCache методы (IMSPost-style LAST_* variables) ===
+
+    /// <summary>
+    /// Проверить, изменилось ли значение по сравнению с кэшем
+    /// </summary>
+    public bool HasStateChanged<T>(string key, T currentValue)
+    {
+        return StateCache.HasChanged(key, currentValue);
+    }
+
+    /// <summary>
+    /// Обновить значение в кэше состояний
+    /// </summary>
+    public void UpdateState<T>(string key, T value)
+    {
+        StateCache.Update(key, value);
+    }
+
+    /// <summary>
+    /// Получить значение из кэша состояний
+    /// </summary>
+    public T GetState<T>(string key, T defaultValue = default!)
+    {
+        return StateCache.Get(key, defaultValue);
+    }
+
+    /// <summary>
+    /// Получить или установить значение в кэше состояний
+    /// </summary>
+    public T GetOrSetState<T>(string key, T defaultValue = default!)
+    {
+        return StateCache.GetOrSet(key, defaultValue);
+    }
+
+    /// <summary>
+    /// Сбросить значение из кэша состояний
+    /// </summary>
+    public void ResetState(string key)
+    {
+        StateCache.Remove(key);
+    }
+
+    /// <summary>
+    /// Сбросить весь кэш состояний
+    /// </summary>
+    public void ResetAllStates()
+    {
+        StateCache.Clear();
+    }
+
+    // === CycleCache методы ===
+
+    /// <summary>
+    /// Записать цикл, если параметры отличаются от закэшированных
+    /// </summary>
+    /// <param name="cycleName">Имя цикла (например, "CYCLE800")</param>
+    /// <param name="parameters">Параметры цикла</param>
+    /// <returns>true если записано полное определение</returns>
+    public bool WriteCycleIfDifferent(string cycleName, Dictionary<string, object> parameters)
+    {
+        return CycleCacheHelper.WriteIfDifferent(this, cycleName, parameters);
+    }
+
+    /// <summary>
+    /// Сбросить кэш цикла
+    /// </summary>
+    public void ResetCycleCache(string cycleName)
+    {
+        CycleCacheHelper.Reset(this, cycleName);
+    }
+
+    // === NumericNCWord методы ===
+
+    /// <summary>
+    /// Получить NumericNCWord по адресу
+    /// </summary>
+    /// <param name="address">Адрес (X, Y, Z, F, S...)</param>
+    /// <returns>NumericNCWord</returns>
+    public NumericNCWord GetNumericWord(string address)
+    {
+        if (NumericWords.TryGetValue(address.ToUpperInvariant(), out var word))
+            return word;
+
+        // Создать новый если не найден
+        var newWord = new NumericNCWord(Config, address.ToUpperInvariant());
+        NumericWords[address.ToUpperInvariant()] = newWord;
+        return newWord;
+    }
+
+    /// <summary>
+    /// Установить значение регистра через NumericNCWord
+    /// </summary>
+    /// <param name="address">Адрес регистра</param>
+    /// <param name="value">Значение</param>
+    public void SetNumericValue(string address, double value)
+    {
+        var word = GetNumericWord(address);
+        word.v = value;
+    }
+
+    /// <summary>
+    /// Записать комментарий с использованием стиля из конфига
+    /// </summary>
+    /// <param name="text">Текст комментария</param>
+    public void Comment(string text)
+    {
+        var comment = new TextNCWord(Config, text);
+        BlockWriter.WriteLine(comment.ToNCString());
+    }
+
+    /// <summary>
+    /// Записать строку с нумерацией блока из конфига
+    /// </summary>
+    /// <param name="text">Текст строки</param>
+    public void WriteLine(string text)
+    {
+        BlockWriter.WriteLine(text);
     }
 
     public async IAsyncEnumerable<PostEvent> ProcessCommandAsync(APTCommand command)
@@ -450,6 +608,41 @@ public class PostContext : IAsyncDisposable
         new PostEvent(PostEventType.GeometryDefined, cmd, new() { ["type"] = "circle" });
 
     // Вспомогательные методы для макросов
+    /// <summary>
+    /// Записать NC-блок через BlockWriter с автоматической модальностью
+    /// </summary>
+    public void WriteBlock(bool includeBlockNumber = true)
+    {
+        BlockWriter.WriteBlock(includeBlockNumber);
+    }
+    
+    /// <summary>
+    /// Записать строку напрямую (для комментариев, заголовков)
+    /// </summary>
+    public void Write(string text)
+    {
+        BlockWriter.WriteLine(text);
+    }
+
+    /// <summary>
+    /// Скрыть регистры (не выводить до изменения)
+    /// </summary>
+    public void HideRegisters(params Register[] registers)
+    {
+        BlockWriter.Hide(registers);
+    }
+    
+    /// <summary>
+    /// Показать регистры (вывести обязательно)
+    /// </summary>
+    public void ShowRegisters(params Register[] registers)
+    {
+        BlockWriter.Show(registers);
+    }
+    
+    /// <summary>
+    /// Форматировать движение в блок (устаревший метод, использовать BlockWriter)
+    /// </summary>
     public string FormatMotionBlock(bool isRapid = false)
     {
         var changed = Registers.ChangedRegisters().ToList();

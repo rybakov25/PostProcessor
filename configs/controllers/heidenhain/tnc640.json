@@ -1,7 +1,48 @@
 {
+  "$schema": "../controller-schema.json",
   "name": "Heidenhain TNC 640",
   "machineType": "Milling",
   "version": "340490-03",
+  "description": "Configuration for Heidenhain TNC 640 controllers",
+
+  "output": {
+    "extension": ".h",
+    "encoding": "UTF-8",
+    "lineEnding": "LF"
+  },
+
+  "formatting": {
+    "blockNumber": {
+      "enabled": false,
+      "prefix": "",
+      "increment": 0,
+      "start": 0
+    },
+    "comments": {
+      "type": "semicolon",
+      "prefix": "(",
+      "suffix": ")",
+      "semicolonPrefix": ";",
+      "maxLength": 80,
+      "transliterate": false,
+      "allowSpecialCharacters": true
+    },
+    "coordinates": {
+      "decimals": 3,
+      "trailingZeros": false,
+      "decimalPoint": true,
+      "leadingZeros": false
+    },
+    "feedrate": {
+      "decimals": 1,
+      "prefix": "F"
+    },
+    "spindleSpeed": {
+      "decimals": 0,
+      "prefix": "S"
+    }
+  },
+
   "registerFormats": {
     "X": { "address": "X", "format": "F3.3", "isModal": false },
     "Y": { "address": "Y", "format": "F3.3", "isModal": false },

@@ -1,0 +1,168 @@
+{
+  "$schema": "machine-profile-schema.json",
+  "name": "TOS KURIM FSQ100 O",
+  "machineProfile": "fsq100_01",
+  "machineType": "Milling",
+  "version": "Siemens 840D",
+  "description": "TOS KURIM FSQ-100 O horizontal machining center with Siemens Sinumerik 840D controller",
+
+  "axes": {
+    "linear": ["X", "Y", "Z"],
+    "rotary": ["B"],
+    "primary": "X",
+    "secondary": "Y",
+    "tertiary": "Z"
+  },
+
+  "limits": {
+    "X": { "min": -500, "max": 1000 },
+    "Y": { "min": -300, "max": 600 },
+    "Z": { "min": -200, "max": 800 },
+    "B": { "min": -180, "max": 180 }
+  },
+
+  "registerFormats": {
+    "X": {
+      "address": "X",
+      "format": "F4.3",
+      "isModal": true,
+      "minValue": -500,
+      "maxValue": 1000
+    },
+    "Y": {
+      "address": "Y",
+      "format": "F4.3",
+      "isModal": true,
+      "minValue": -300,
+      "maxValue": 600
+    },
+    "Z": {
+      "address": "Z",
+      "format": "F4.3",
+      "isModal": true,
+      "minValue": -200,
+      "maxValue": 800
+    },
+    "B": {
+      "address": "B",
+      "format": "F3.2",
+      "isModal": true,
+      "minValue": -180,
+      "maxValue": 180
+    },
+    "F": {
+      "address": "F",
+      "format": "F3.1",
+      "isModal": false,
+      "minValue": 1,
+      "maxValue": 10000
+    },
+    "S": {
+      "address": "S",
+      "format": "F0",
+      "isModal": false,
+      "minValue": 50,
+      "maxValue": 8000
+    },
+    "T": {
+      "address": "T",
+      "format": "F0",
+      "isModal": false,
+      "minValue": 1,
+      "maxValue": 60
+    }
+  },
+
+  "functionCodes": {
+    "rapid": { "code": "G00", "group": "MOTION", "isModal": true },
+    "linear": { "code": "G01", "group": "MOTION", "isModal": true },
+    "cw_arc": { "code": "G02", "group": "MOTION", "isModal": true },
+    "ccw_arc": { "code": "G03", "group": "MOTION", "isModal": true },
+    "spindle_cw": { "code": "M03", "group": "SPINDLE", "isModal": true },
+    "spindle_stop": { "code": "M05", "group": "SPINDLE", "isModal": false },
+    "coolant_flood": { "code": "M08", "group": "COOLANT", "isModal": true },
+    "coolant_off": { "code": "M09", "group": "COOLANT", "isModal": false },
+    "tool_change": { "code": "T=\"{toolname}\"", "group": "TOOL_CHANGE", "isModal": false },
+    "program_end": { "code": "M30", "group": "PROGRAM", "isModal": false }
+  },
+
+  "workCoordinateSystems": [
+    { "number": 1, "code": "G54", "xOffset": 0.0, "yOffset": 0.0, "zOffset": 0.0 },
+    { "number": 2, "code": "G55", "xOffset": 0.0, "yOffset": 0.0, "zOffset": 0.0 }
+  ],
+
+  "drillingCycles": {
+    "drill": "CYCLE81",
+    "peckDrill": "CYCLE83",
+    "tapping": "CYCLE84",
+    "boring": "CYCLE85"
+  },
+
+  "safety": {
+    "clearancePlane": 100.0,
+    "retractPlane": 50.0,
+    "maxFeedRate": 10000.0,
+    "maxSpindleSpeed": 8000.0,
+    "autoToolChangeRetract": true,
+    "enableTravelLimitsCheck": true
+  },
+
+  "multiAxis": {
+    "enableRtcp": false,
+    "maxB": 180.0,
+    "minB": -180.0,
+    "strategy": "3plus2"
+  },
+
+  "templates": {
+    "enabled": true,
+    "header": [
+      "(POSTPROCESSED FOR TOS KURIM FSQ100 O)",
+      "(DATE: {dateTime})"
+    ],
+    "footer": [
+      "M30"
+    ],
+    "includeTimestamp": true,
+    "includeToolList": true
+  },
+
+  "customParameters": {
+    "threePlusTwoSupport": true,
+    "headOrientation": "vertical",
+    "clampCommand": "M36",
+    "unclampCommand": "M37",
+    "discretizationB": 1.0,
+    "rapidOrder": ["X", "Y", "Z"],
+    "rotaryBeforeLinear": true
+  },
+
+  "customGCodes": {
+    "workOffset": "G54"
+  },
+
+  "customMCodes": {
+    "headClamp": "M36",
+    "headUnclamp": "M37"
+  },
+
+  "axisLimits": {
+    "XMin": -500,
+    "XMax": 1000,
+    "YMin": -300,
+    "YMax": 600,
+    "ZMin": -200,
+    "ZMax": 800,
+    "BMin": -180,
+    "BMax": 180
+  },
+
+  "macros": {
+    "init": "fsq100/init.py",
+    "fini": "fsq100/fini.py",
+    "goto": "fsq100/goto.py",
+    "rapid": "fsq100/rapid.py",
+    "toolChange": "fsq100/loadtl.py",
+    "coolant": "fsq100/coolnt.py"
+  }
+}

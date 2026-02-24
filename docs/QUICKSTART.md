@@ -1,7 +1,7 @@
 # 🚀 Быстрый старт: Python макросы за 10 минут
 
-> **Для кого:** Новички без опыта программирования постпроцессоров  
-> **Время:** 10 минут  
+> **Для кого:** Новички без опыта программирования постпроцессоров
+> **Время:** 10 минут
 > **Результат:** Работающий макрос для вашего станка
 
 ---
@@ -115,7 +115,82 @@ N1 G0 X0. Y0. Z50.
 
 ---
 
-## Шаг 4: Модифицируем макрос (3 минуты)
+## Шаг 4: Продвинутые возможности (5 минут)
+
+### StateCache — кэш состояний
+
+Кэширование LAST_* переменных для модального вывода:
+
+```python
+# -*- coding: ascii -*-
+def execute(context, command):
+    feed = command.getNumeric(0, 0)
+    
+    # Проверка изменения через кэш
+    if context.cacheHasChanged("LAST_FEED", feed):
+        context.registers.f = feed
+        context.writeBlock()
+        context.cacheSet("LAST_FEED", feed)
+```
+
+### CycleCache — кэширование циклов
+
+Автоматический выбор: полное определение или вызов:
+
+```python
+# -*- coding: ascii -*-
+def execute(context, command):
+    params = {
+        'MODE': 1,
+        'X': 100.0,
+        'Y': 200.0,
+        'Z': 50.0
+    }
+    
+    # Умный вывод
+    context.cycleWriteIfDifferent("CYCLE800", params)
+```
+
+**Результат:**
+```nc
+; Первый вызов (полное определение)
+CYCLE800(MODE=1, X=100.000, Y=200.000, Z=50.000)
+
+; Второй вызов (те же параметры - только вызов)
+CYCLE800()
+```
+
+### NumericNCWord — форматирование из конфига
+
+```python
+# -*- coding: ascii -*-
+def execute(context, command):
+    x = command.getNumeric(0, 0)
+    
+    # Установка с форматированием из конфига
+    context.setNumericValue('X', x)
+    
+    # Получение отформатированной строки
+    xStr = context.getFormattedValue('X')  # "X100.500"
+    
+    context.writeBlock()
+```
+
+### TextNCWord — комментарии со стилем
+
+```python
+# -*- coding: ascii -*-
+def execute(context, command):
+    # Автоматически использует стиль из конфига
+    context.comment("Начало операции")
+    
+    # Siemens: (Начало операции)
+    # Haas: ; Начало операции
+```
+
+---
+
+## Шаг 5: Модифицируем макрос (3 минуты)
 
 ### Добавляем чтение параметров
 
@@ -127,21 +202,21 @@ N1 G0 X0. Y0. Z50.
 
 def execute(context, command):
     """Обработка GOTO с координатами"""
-    
+
     # Проверяем наличие параметров
     if not command.numeric or len(command.numeric) == 0:
         return
-    
+
     # Получаем координаты
     x = command.numeric[0]
     y = command.numeric[1] if len(command.numeric) > 1 else 0
     z = command.numeric[2] if len(command.numeric) > 2 else 0
-    
+
     # Обновляем регистры
     context.registers.x = x
     context.registers.y = y
     context.registers.z = z
-    
+
     # Выводим G-код
     context.write(f"G1 X{x:.3f} Y{y:.3f} Z{z:.3f}")
 ```
@@ -173,20 +248,20 @@ N1 G1 X100.000 Y50.000 Z10.000
 def execute(context, command):
     """
     APT: GOTO/X, Y, Z
-    
+
     Вывод: G1 X... Y... Z...
     """
     if not command.numeric:
         return
-    
+
     x = command.numeric[0] if len(command.numeric) > 0 else context.registers.x
     y = command.numeric[1] if len(command.numeric) > 1 else context.registers.y
     z = command.numeric[2] if len(command.numeric) > 2 else context.registers.z
-    
+
     context.registers.x = x
     context.registers.y = y
     context.registers.z = z
-    
+
     context.write(f"G1 X{x:.3f} Y{y:.3f} Z{z:.3f}")
 ```
 
@@ -202,13 +277,13 @@ def execute(context, command):
     """
     APT: SPINDL/ON, CLW, 1600
          SPINDL/OFF
-    
+
     Вывод: M3 S... / M5
     """
     # Получаем обороты
     rpm = command.numeric[0] if command.numeric else 0
     context.registers.s = rpm
-    
+
     # Определяем состояние
     state = "OFF"
     if command.minorWords:
@@ -220,7 +295,7 @@ def execute(context, command):
                 state = "CCW"
             elif w == "OFF":
                 state = "OFF"
-    
+
     # Вывод команд
     if state == "CW":
         context.write("M3")
@@ -248,11 +323,11 @@ def execute(context, command):
          COOLNT/FLOOD
          COOLNT/MIST
          COOLNT/OFF
-    
+
     Вывод: M8 / M7 / M9
     """
     state = "FLOOD"  # По умолчанию
-    
+
     if command.minorWords:
         for word in command.minorWords:
             w = word.upper()
@@ -262,7 +337,7 @@ def execute(context, command):
                 state = "MIST"
             elif w == "OFF":
                 state = "OFF"
-    
+
     if state == "FLOOD":
         context.write("M8")
     elif state == "MIST":
@@ -273,7 +348,7 @@ def execute(context, command):
 
 ---
 
-### Шаблон 4: Управление подачей (модальное)
+### Шаблон 4: Управление подачей (модальное) с StateCache
 
 ```python
 # -*- coding: ascii -*-
@@ -282,22 +357,19 @@ def execute(context, command):
 def execute(context, command):
     """
     APT: FEDRAT/500
-    
+
     Вывод: F... (только при изменении)
     """
     if not command.numeric:
         return
-    
+
     feed = command.numeric[0]
-    context.registers.f = feed
     
-    # Проверяем изменение (модальность)
-    last_feed = context.globalVars.GetDouble("LAST_FEED", 0.0)
-    if last_feed == feed:
-        return  # Не изменилась — не выводим
-    
-    context.globalVars.SetDouble("LAST_FEED", feed)
-    context.write(f"F{feed:.1f}")
+    # Проверка изменения через StateCache
+    if context.cacheHasChanged("LAST_FEED", feed):
+        context.registers.f = feed
+        context.writeBlock()
+        context.cacheSet("LAST_FEED", feed)
 ```
 
 ---
@@ -311,24 +383,24 @@ def execute(context, command):
 def execute(context, command):
     """
     APT: RAPID/X, Y, Z
-    
+
     Вывод: G0 X... Y... Z...
     """
     # Устанавливаем тип движения RAPID
     context.system.MOTION = "RAPID"
     context.currentMotionType = "RAPID"
-    
+
     if not command.numeric:
         return
-    
+
     x = command.numeric[0] if len(command.numeric) > 0 else context.registers.x
     y = command.numeric[1] if len(command.numeric) > 1 else context.registers.y
     z = command.numeric[2] if len(command.numeric) > 2 else context.registers.z
-    
+
     context.registers.x = x
     context.registers.y = y
     context.registers.z = z
-    
+
     context.write(f"G0 X{x:.3f} Y{y:.3f} Z{z:.3f}")
 ```
 
@@ -343,22 +415,22 @@ def execute(context, command):
 def execute(context, command):
     """
     APT: LOADTL/5
-    
+
     Вывод: T5 M6
     """
     if not command.numeric:
         context.warning("LOADTL требует номер инструмента")
         return
-    
+
     new_tool = int(command.numeric[0])
-    
+
     # Проверка на тот же инструмент
     if context.globalVars.TOOL == new_tool:
         return
-    
+
     context.registers.t = new_tool
     context.globalVars.TOOL = new_tool
-    
+
     context.write(f"T{new_tool}")
     context.write("M6")
 ```
@@ -374,18 +446,18 @@ def execute(context, command):
 def execute(context, command):
     """
     APT: PARTNO/NAME
-    
+
     Вывод: Заголовок, начальные G-коды
     """
     # Инициализация счетчиков
     context.globalVars.SetInt("BLOCK_NUMBER", 1)
     context.globalVars.SetInt("BLOCK_INCREMENT", 2)
     context.globalVars.SetDouble("LAST_FEED", 0.0)
-    
+
     # Заголовок
     context.comment(f"Program: {command.getString(0, 'UNKNOWN')}")
     context.comment(f"Date: {context.config.getParameterString('dateTime', 'N/A')}")
-    
+
     # Начальные команды
     context.write("G54 G40 G90 G94 G17")
     context.write("G0 Z100.")
@@ -402,20 +474,79 @@ def execute(context, command):
 def execute(context, command):
     """
     APT: FINI
-    
+
     Вывод: Отвод, M5, M9, M30
     """
     # Отвод по Z
     context.write("G0 Z100.")
-    
+
     # Выключение шпинделя
     context.write("M5")
-    
+
     # Выключение охлаждения
     context.write("M9")
-    
+
     # Конец программы
     context.write("M30")
+```
+
+---
+
+### Шаблон 9: Цикл с CycleCache
+
+```python
+# -*- coding: ascii -*-
+# CYCLE800 - Поворотная ось (с кэшированием)
+
+def execute(context, command):
+    """
+    APT: CYCLE800/MODE, X, Y, Z, ...
+
+    Вывод: CYCLE800(...) с автоматическим кэшированием
+    """
+    params = {
+        'MODE': command.getNumeric(0, 1),
+        'X': command.getNumeric(1, 0.0),
+        'Y': command.getNumeric(2, 0.0),
+        'Z': command.getNumeric(3, 0.0)
+    }
+    
+    # Умный вывод с кэшированием
+    context.cycleWriteIfDifferent("CYCLE800", params)
+```
+
+---
+
+### Шаблон 10: NumericNCWord с форматированием
+
+```python
+# -*- coding: ascii -*-
+# AXIS - Перемещение с форматированием из конфига
+
+def execute(context, command):
+    """
+    APT: AXIS/X, Y, Z
+
+    Вывод: X... Y... Z... с форматом из конфига
+    """
+    if not command.numeric:
+        return
+
+    x = command.getNumeric(0, 0)
+    y = command.getNumeric(1, 0)
+    z = command.getNumeric(2, 0)
+    
+    # Установка значений с форматированием из конфига
+    context.setNumericValue('X', x)
+    context.setNumericValue('Y', y)
+    context.setNumericValue('Z', z)
+    
+    # Получение отформатированных строк
+    xStr = context.getFormattedValue('X')  # "X100.500"
+    yStr = context.getFormattedValue('Y')  # "Y200.750"
+    zStr = context.getFormattedValue('Z')  # "Z50.250"
+    
+    context.writeBlock()
 ```
 
 ---
@@ -480,6 +611,58 @@ context.globalVars.SetDouble("LAST_FEED", 500.0)
 context.globalVars.SetInt("COUNTER", 10)
 ```
 
+### StateCache — кэш состояний (v1.1.0)
+
+```python
+# Проверка изменения
+if context.cacheHasChanged("LAST_FEED", feed):
+    context.writeBlock()
+    context.cacheSet("LAST_FEED", feed)
+
+# Сброс кэша
+context.cacheReset("LAST_FEED")
+```
+
+### CycleCache — кэширование циклов (v1.1.0)
+
+```python
+# Умный вывод цикла
+params = {'X': 100.0, 'Y': 200.0}
+context.cycleWriteIfDifferent("CYCLE800", params)
+
+# Принудительный полный вывод
+context.cycleForceWrite("CYCLE800", params)
+
+# Очистка кэша цикла
+context.cycleCacheClear("CYCLE800")
+```
+
+### NumericNCWord — форматирование (v1.1.0)
+
+```python
+# Установка значения
+context.setNumericValue('X', 100.5)
+
+# Получение отформатированной строки
+xStr = context.getFormattedValue('X')  # "X100.500"
+
+# Запись в блок
+context.writeBlock()
+```
+
+### TextNCWord — стилизованный текст (v1.1.0)
+
+```python
+# Комментарий (стиль из конфига)
+context.comment("Начало операции")
+
+# Примечание
+context.note("Примечание")
+
+# Предупреждение
+context.warning("Внимание!")
+```
+
 ---
 
 ## 🐛 Отладка
@@ -514,9 +697,26 @@ dotnet run -- -i test.apt -o output.nc -c siemens --debug
 
 ## 🎓 Следующие шаги
 
-1. **Изучите полное руководство**: [PYTHON_MACROS_GUIDE.md](PYTHON_MACROS_GUIDE.md)
-2. **Посмотрите архитектуру**: [ARCHITECTURE.md](ARCHITECTURE.md)
-3. **Изучите готовые макросы**: `macros/python/base/` и `macros/python/mmill/`
+### Изучите документацию
+
+- [PYTHON_MACROS_GUIDE.md](PYTHON_MACROS_GUIDE.md) — полное руководство по макросам
+- [CONFIGURATION_GUIDE.md](CONFIGURATION_GUIDE.md) — настройка конфигов
+- [ARCHITECTURE.md](ARCHITECTURE.md) — архитектура постпроцессора
+
+### Продвинутые темы
+
+- StateCache для модального вывода
+- CycleCache для кэширования циклов
+- NumericNCWord для форматирования
+- TextNCWord для комментариев
+
+### Примеры макросов
+
+Изучите готовые макросы в `macros/python/base/`:
+- `goto.py` — линейные перемещения
+- `spindl.py` — управление шпинделем
+- `coolnt.py` — охлаждение
+- `cycle81.py` — циклы сверления
 
 ---
 

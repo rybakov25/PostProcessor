@@ -1,0 +1,163 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://github.com/rybakov25/PostProcessor/configs/controller-schema.json",
+  "title": "PostProcessor Controller Configuration",
+  "description": "JSON Schema for validating controller configuration files",
+  "type": "object",
+  "required": ["name", "machineType"],
+  "properties": {
+    "$schema": {
+      "type": "string",
+      "description": "JSON Schema reference"
+    },
+    "name": {
+      "type": "string",
+      "description": "Controller name",
+      "minLength": 1,
+      "examples": ["Siemens Sinumerik 840D sl", "Fanuc 31i", "Heidenhain TNC640"]
+    },
+    "version": {
+      "type": "string",
+      "description": "Configuration version",
+      "pattern": "^[0-9]+\\.[0-9]+$"
+    },
+    "description": {
+      "type": "string",
+      "description": "Controller description"
+    },
+    "machineType": {
+      "type": "string",
+      "description": "Type of machine",
+      "enum": ["Milling", "Turning", "MillTurn", "Robot", "WireEDM"]
+    },
+    "output": {
+      "type": "object",
+      "properties": {
+        "extension": {
+          "type": "string",
+          "description": "Output file extension",
+          "examples": [".mpf", ".nc", ".txt"]
+        },
+        "encoding": {
+          "type": "string",
+          "description": "File encoding",
+          "enum": ["UTF-8", "ASCII", "windows-1251"]
+        },
+        "lineEnding": {
+          "type": "string",
+          "description": "Line ending style",
+          "enum": ["LF", "CRLF"]
+        }
+      }
+    },
+    "formatting": {
+      "type": "object",
+      "properties": {
+        "blockNumber": {
+          "type": "object",
+          "properties": {
+            "enabled": { "type": "boolean" },
+            "prefix": { "type": "string" },
+            "increment": { "type": "integer", "minimum": 1 },
+            "start": { "type": "integer", "minimum": 1 }
+          }
+        },
+        "coordinates": {
+          "type": "object",
+          "properties": {
+            "decimals": { "type": "integer", "minimum": 0, "maximum": 6 },
+            "trailingZeros": { "type": "boolean" },
+            "decimalPoint": { "type": "boolean" }
+          }
+        },
+        "feedrate": {
+          "type": "object",
+          "properties": {
+            "decimals": { "type": "integer", "minimum": 0, "maximum": 3 },
+            "prefix": { "type": "string" }
+          }
+        },
+        "spindleSpeed": {
+          "type": "object",
+          "properties": {
+            "decimals": { "type": "integer", "minimum": 0, "maximum": 2 },
+            "prefix": { "type": "string" }
+          }
+        },
+        "circlesThroughRadius": {
+          "type": "boolean",
+          "description": "Use R format for arcs instead of IJK"
+        },
+        "printToolListAtStart": {
+          "type": "boolean",
+          "description": "Print tool list at the beginning of program"
+        }
+      }
+    },
+    "gcode": {
+      "type": "object",
+      "additionalProperties": {
+        "type": "string"
+      },
+      "description": "G-code mappings"
+    },
+    "mcode": {
+      "type": "object",
+      "additionalProperties": {
+        "type": "string"
+      },
+      "description": "M-code mappings"
+    },
+    "cycles": {
+      "type": "object",
+      "additionalProperties": {
+        "type": "string"
+      },
+      "description": "Cycle mappings (CYCLE81, CYCLE83, etc.)"
+    },
+    "fiveAxis": {
+      "type": "object",
+      "properties": {
+        "enabled": { "type": "boolean" },
+        "tcpEnabled": { "type": "boolean" },
+        "tcpOn": { "type": "string" },
+        "tcpOff": { "type": "string" },
+        "transformation": { "type": "string" },
+        "transformationOff": { "type": "string" },
+        "cycle800": {
+          "type": "object",
+          "properties": {
+            "enabled": { "type": "boolean" },
+            "format": { "type": "string" }
+          }
+        }
+      }
+    },
+    "templates": {
+      "type": "object",
+      "properties": {
+        "enabled": { "type": "boolean" },
+        "header": {
+          "type": "array",
+          "items": { "type": "string" },
+          "description": "Header template lines"
+        },
+        "footer": {
+          "type": "array",
+          "items": { "type": "string" },
+          "description": "Footer template lines"
+        }
+      }
+    },
+    "safety": {
+      "type": "object",
+      "properties": {
+        "retractPlane": { "type": "number" },
+        "clearanceHeight": { "type": "number" },
+        "approachDistance": { "type": "number" },
+        "maxFeedRate": { "type": "number" },
+        "maxRapidRate": { "type": "number" }
+      }
+    }
+  }
+}

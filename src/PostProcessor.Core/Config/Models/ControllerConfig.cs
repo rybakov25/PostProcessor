@@ -114,6 +114,11 @@ public record ControllerConfig
     public AxisLimits? AxisLimits { get; init; }
 
     /// <summary>
+    /// Параметры форматирования вывода
+    /// </summary>
+    public OutputFormatting Formatting { get; init; } = new();
+
+    /// <summary>
     /// Получить формат регистра по адресу
     /// </summary>
     public RegisterFormat GetRegisterFormat(string address, RegisterFormat? defaultValue = null)
@@ -167,6 +172,165 @@ public record ControllerConfig
             return typedValue;
         return defaultValue;
     }
+}
+
+/// <summary>
+/// Параметры форматирования вывода
+/// </summary>
+public record OutputFormatting
+{
+    /// <summary>
+    /// Настройки нумерации блоков
+    /// </summary>
+    public BlockNumbering BlockNumber { get; init; } = new();
+
+    /// <summary>
+    /// Настройки комментариев
+    /// </summary>
+    public CommentStyle Comments { get; init; } = new();
+
+    /// <summary>
+    /// Форматирование координат
+    /// </summary>
+    public CoordinateFormatting Coordinates { get; init; } = new();
+
+    /// <summary>
+    /// Форматирование подачи
+    /// </summary>
+    public FeedrateFormatting Feedrate { get; init; } = new();
+
+    /// <summary>
+    /// Форматирование шпинделя
+    /// </summary>
+    public SpindleFormatting SpindleSpeed { get; init; } = new();
+}
+
+/// <summary>
+/// Настройки нумерации блоков
+/// </summary>
+public record BlockNumbering
+{
+    /// <summary>
+    /// Включить нумерацию блоков
+    /// </summary>
+    public bool Enabled { get; init; } = true;
+
+    /// <summary>
+    /// Префикс номера блока (например, "N")
+    /// </summary>
+    public string Prefix { get; init; } = "N";
+
+    /// <summary>
+    /// Начальный номер блока
+    /// </summary>
+    public int Start { get; init; } = 1;
+
+    /// <summary>
+    /// Шаг инкремента
+    /// </summary>
+    public int Increment { get; init; } = 10;
+}
+
+/// <summary>
+/// Настройки стиля комментариев
+/// </summary>
+public record CommentStyle
+{
+    /// <summary>
+    /// Тип комментария: parentheses, semicolon, both
+    /// parentheses: (Comment text)
+    /// semicolon: ; Comment text
+    /// both: (Comment text) ; Comment text
+    /// </summary>
+    public string Type { get; init; } = "parentheses";
+
+    /// <summary>
+    /// Префикс для parentheses стиля (по умолчанию "(")
+    /// </summary>
+    public string Prefix { get; init; } = "(";
+
+    /// <summary>
+    /// Суффикс для parentheses стиля (по умолчанию ")")
+    /// </summary>
+    public string Suffix { get; init; } = ")";
+
+    /// <summary>
+    /// Префикс для semicolon стиля (по умолчанию ";")
+    /// </summary>
+    public string SemicolonPrefix { get; init; } = ";";
+
+    /// <summary>
+    /// Максимальная длина комментария (0 = без ограничений)
+    /// </summary>
+    public int MaxLength { get; init; } = 128;
+
+    /// <summary>
+    /// Транслитерировать кириллицу в латиницу
+    /// </summary>
+    public bool Transliterate { get; init; } = false;
+
+    /// <summary>
+    /// Разрешить специальные символы в комментариях
+    /// </summary>
+    public bool AllowSpecialCharacters { get; init; } = true;
+}
+
+/// <summary>
+/// Форматирование координат
+/// </summary>
+public record CoordinateFormatting
+{
+    /// <summary>
+    /// Количество знаков после запятой
+    /// </summary>
+    public int Decimals { get; init; } = 3;
+
+    /// <summary>
+    /// Добавлять ведущие нули
+    /// </summary>
+    public bool LeadingZeros { get; init; } = true;
+
+    /// <summary>
+    /// Добавлять десятичную точку даже для целых чисел
+    /// </summary>
+    public bool DecimalPoint { get; init; } = true;
+
+    /// <summary>
+    /// Удалять незначащие нули в конце
+    /// </summary>
+    public bool TrailingZeros { get; init; } = false;
+}
+
+/// <summary>
+/// Форматирование подачи
+/// </summary>
+public record FeedrateFormatting
+{
+    /// <summary>
+    /// Количество знаков после запятой
+    /// </summary>
+    public int Decimals { get; init; } = 1;
+
+    /// <summary>
+    /// Префикс (по умолчанию "F")
+    /// </summary>
+    public string Prefix { get; init; } = "F";
+}
+
+/// <summary>
+/// Форматирование шпинделя
+/// </summary>
+public record SpindleFormatting
+{
+    /// <summary>
+    /// Количество знаков после запятой (0 = целое число)
+    /// </summary>
+    public int Decimals { get; init; } = 0;
+
+    /// <summary>
+    /// Префикс (по умолчанию "S")
+    /// </summary>
+    public string Prefix { get; init; } = "S";
 }
 
 public enum MachineType
