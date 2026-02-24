@@ -1,6 +1,7 @@
 # .NET build outputs
 obj/
 bin/
+publish/
 
 # Python cache
 __pycache__/
